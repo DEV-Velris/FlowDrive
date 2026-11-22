@@ -1,0 +1,9 @@
+# zips fabriques par tools/build.ps1
+dist/
+*.zip
+
+# fichiers systeme et editeurs
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

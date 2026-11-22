@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<!-- FlowDrive 0.6.0 : fenetre de reglages. Mise en page reprise des profils FS25 deja utilises par CVT Addon. -->
+<GUI onOpen="onOpen" onClose="onClose">
+
+    <GuiElement profile="newLayer" />
+    <Bitmap profile="dialogFullscreenBg"/>
+
+    <GuiElement profile="fs25_dialogBg" id="dialogElement" size="1500px 900px">
+        <ThreePartBitmap profile="fs25_dialogBgMiddleSmall"/>
+        <ThreePartBitmap profile="fs25_dialogBgTopSmall"/>
+        <ThreePartBitmap profile="fs25_dialogBgBottom"/>
+
+        <GuiElement profile="fs25_dialogContentContainer" id="settingsContainer">
+            <Bitmap profile="fs25_startClipper" name="topClipper" />
+            <Bitmap profile="fs25_stopClipper" name="bottomClipper" />
+
+            <!-- EN-TETE -->
+            <GuiElement profile="fs25_menuHeaderPanel">
+                <Text typeClass="TEXT" profile="dialogHeaderText" textAutoSize="true" id="guiTitle" position="0px -20px" />
+                <Text typeClass="TEXT" profile="versionText" textAutoSize="true" id="guiVersion" position="1300px -30px" />
+            </GuiElement>
+
+            <!-- REGLAGES -->
+            <ScrollingLayout profile="fs25_settingsLayout" id="scrollingLayout"
+                topClipperElementName="topClipper" bottomClipperElementName="bottomClipper"
+                position="10px -50px" width="1400px" height="680px">
+
+                <Text profile="fs25_settingsSectionHeader" name="sectionVehicle" text="$l10n_fd_section_vehicle"/>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_enabled"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optEnabled">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttEnabled" position="700px 0px" text="$l10n_fd_opt_enabled_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_ramp"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optRamp">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_ramp_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_range"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optRange">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_range_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_ptoEco"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optPtoEco">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_ptoEco_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_memory"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optMemory">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_memory_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_mem1"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optMem1">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_mem_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_mem2"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optMem2">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_mem_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_boost"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optBoost">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_boost_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_boostMode"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optBoostMode">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_boostMode_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_flow"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optFlow">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_flow_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <Text profile="fs25_settingsSectionHeader" name="sectionGeneral" text="$l10n_fd_section_general"/>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_hydraulic"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optHydraulic">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_hydraulic_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_preheat"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optPreheat">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_preheat_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_cold"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optCold">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_cold_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_hud"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optHud">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_hud_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_hudPos"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optHudPos">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_hudPos_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_dbl"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optDbl">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_dbl_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <Text profile="dialogHeaderText"/>
+            </ScrollingLayout>
+
+            <Slider profile="fs25_sliderDocked" dataElementId="scrollingLayout" position="1464px 0px" height="818px" />
+
+            <!-- BOUTONS -->
+            <BoxLayout profile="fs25_dialogButtonBox" position="0px -40px">
+                <Button profile="buttonBack" id="backButton" text="$l10n_button_back" onClick="onClickBack"/>
+                <Bitmap profile="fs25_dialogButtonBoxSeparator"/>
+                <Button profile="buttonExtra1" id="boostButton" text="$l10n_fd_button_boost" onClick="onClickBoostInput"/>
+                <Bitmap profile="fs25_dialogButtonBoxSeparator"/>
+                <Button profile="buttonOK" id="okButton" text="$l10n_button_ok" onClick="onClickApply"/>
+            </BoxLayout>
+        </GuiElement>
+    </GuiElement>
+</GUI>

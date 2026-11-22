@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<modDesc descVersion="114">
+    <author>Velris</author>
+    <version>1.0.1.0</version>
+    <title>
+        <en>FlowDrive</en>
+        <fr>FlowDrive</fr>
+    </title>
+    <description>
+        <en><![CDATA[Realistic continuously variable (CVT) and hydrostatic (HST) transmission behaviour, active on every eligible vehicle with nothing to buy or configure.
+
+- Tractors: acceleration ramps (Auto or 1 to 4), eco engine speed, load limit, field and road ranges, engine braking adapted to the attached weight.
+- Eco PTO, engine speed memories (hand throttle), adjustable boost (percentage typed per vehicle, included in or added to the game power).
+- Loaders, telehandlers and self-propelled machines: automatic hydraulic engine speed.
+- Harvesters: harvest and road ranges, automatic crop flow control.
+- Automatic preheating and cold engine protection (uses Advanced Damage System temperatures when installed).
+- DashboardLive screens that used to read CVT Addon.
+
+Settings: Left Shift + Left Alt + T. Every other function can be assigned to a key in the controls menu.
+
+Do not use together with CVT Addon. Single player.]]></en>
+        <fr><![CDATA[Comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST), actif sur toutes les machines compatibles, sans rien à acheter ni à configurer.
+
+- Tracteurs : rampes d'accélération (Auto ou 1 à 4), régime éco, limite de charge, gammes champ et route, frein moteur adapté au poids attelé.
+- Prise de force éco, régimes mémorisés (accélérateur à main), boost réglable (pourcentage saisi par machine, inclus dans la puissance du jeu ou en plus).
+- Chargeuses, télescopiques et automotrices : régime hydraulique automatique.
+- Moissonneuses : gammes récolte et route, débit auto.
+- Préchauffage automatique et protection moteur froid (utilise les températures d'Advanced Damage System s'il est présent).
+- Écrans DashboardLive qui lisaient CVT Addon.
+
+Réglages : Maj gauche + Alt gauche + T. Toutes les autres fonctions peuvent recevoir une touche dans le menu des commandes.
+
+Ne pas utiliser avec CVT Addon. Solo.]]></fr>
+    </description>
+    <iconFilename>icon_flowDrive.dds</iconFilename>
+    <multiplayer supported="false"/>
+
+    <extraSourceFiles>
+        <sourceFile filename="scripts/FlowDriveMain.lua"/>
+        <sourceFile filename="scripts/FlowDriveMenu.lua"/>
+    </extraSourceFiles>
+
+    <actions>
+        <action name="FLOWDRIVE_MENU"/>
+        <action name="FLOWDRIVE_TOGGLE"/>
+        <action name="FLOWDRIVE_RAMP"/>
+        <action name="FLOWDRIVE_RANGE"/>
+        <action name="FLOWDRIVE_PTO_ECO"/>
+        <action name="FLOWDRIVE_MEMORY"/>
+        <action name="FLOWDRIVE_RPM_UP"/>
+        <action name="FLOWDRIVE_RPM_DOWN"/>
+        <action name="FLOWDRIVE_BOOST"/>
+        <action name="FLOWDRIVE_FLOW"/>
+        <action name="FLOWDRIVE_INCHING"/>
+        <action name="FLOWDRIVE_DEBUG"/>
+        <action name="FLOWDRIVE_COLDTEST"/>
+    </actions>
+
+    <!-- 1.0.0 : seul le menu a une touche par defaut. Panneau de mesure et essai froid restent assignables. -->
+    <inputBinding>
+        <actionBinding action="FLOWDRIVE_MENU">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_lshift KEY_lalt KEY_t"/>
+        </actionBinding>
+    </inputBinding>
+
+    <l10n filenamePrefix="l10n/l10n"/>
+</modDesc>

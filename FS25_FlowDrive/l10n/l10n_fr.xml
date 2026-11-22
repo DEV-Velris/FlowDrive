@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<l10n>
+    <texts>
+        <!-- Touches -->
+        <text name="input_FLOWDRIVE_MENU" text="FlowDrive : réglages"/>
+        <text name="input_FLOWDRIVE_TOGGLE" text="FlowDrive : marche / arrêt"/>
+        <text name="input_FLOWDRIVE_RAMP" text="FlowDrive : rampe suivante"/>
+        <text name="input_FLOWDRIVE_RANGE" text="FlowDrive : gamme suivante"/>
+        <text name="input_FLOWDRIVE_DEBUG" text="FlowDrive : panneau de mesure (diagnostic)"/>
+        <text name="input_FLOWDRIVE_PTO_ECO" text="FlowDrive : PdF éco marche / arrêt"/>
+        <text name="input_FLOWDRIVE_MEMORY" text="FlowDrive : régime mémorisé (arrêt / 1 / 2)"/>
+        <text name="input_FLOWDRIVE_RPM_UP" text="FlowDrive : régime mémorisé +"/>
+        <text name="input_FLOWDRIVE_RPM_DOWN" text="FlowDrive : régime mémorisé -"/>
+        <text name="input_FLOWDRIVE_BOOST" text="FlowDrive : boost marche / arrêt"/>
+        <text name="input_FLOWDRIVE_FLOW" text="FlowDrive : débit auto marche / arrêt (moissonneuses)"/>
+        <text name="input_FLOWDRIVE_COLDTEST" text="FlowDrive : essai froid (simule −15 °C)"/>
+        <text name="input_FLOWDRIVE_INCHING" text="FlowDrive : approche lente (tenir : ralentit, garde le régime)"/>
+
+        <!-- Menu -->
+        <text name="fd_menu_title" text="Réglages FlowDrive"/>
+        <text name="fd_menu_for" text="pour"/>
+        <text name="fd_section_vehicle" text="Ce véhicule"/>
+        <text name="fd_section_general" text="Réglages généraux (tous les véhicules)"/>
+        <text name="fd_opt_enabled" text="FlowDrive actif"/>
+        <text name="fd_opt_enabled_tt" text="Coupé : conduite du jeu de base pour ce véhicule."/>
+        <text name="fd_opt_ramp" text="Rampe d'accélération"/>
+        <text name="fd_opt_ramp_tt" text="Auto : 2 au travail ou très chargé, 3 à vide, 4 sur chargeuse. 1 : douce, 4 : vive. Règle aussi le frein moteur pied levé."/>
+        <text name="fd_opt_range" text="Gamme"/>
+        <text name="fd_opt_range_tt" text="Auto : gamme route ; sur une moissonneuse, gamme récolte dès que la machine est en marche."/>
+        <text name="fd_opt_ptoEco" text="Prise de force éco"/>
+        <text name="fd_opt_ptoEco_tt" text="Même régime de prise de force avec environ 22 % de régime moteur en moins (540E / 1000E)."/>
+        <text name="fd_opt_memory" text="Régime mémorisé actif"/>
+        <text name="fd_opt_memory_tt" text="Accélérateur à main : le moteur tient ce régime, la vitesse se règle au régulateur."/>
+        <text name="fd_opt_mem1" text="Régime mémorisé 1"/>
+        <text name="fd_opt_mem2" text="Régime mémorisé 2"/>
+        <text name="fd_opt_mem_tt" text="Valeur gardée dans la sauvegarde."/>
+        <text name="fd_opt_boost" text="Boost"/>
+        <text name="fd_opt_boostMode" text="Puissance du jeu"/>
+        <text name="fd_opt_boostMode_tt" text="Inclus : la puissance du jeu est déjà celle avec boost (John Deere, Case IH, Valtra, Fendt 728…), FlowDrive la baisse hors boost. En plus : le boost s’ajoute (Massey Ferguson…)."/>
+        <text name="fd_opt_boost_tt" text="Au-dessus de 16 km/h sans outil baissé, et avec la prise de force. Bouton « Boost : saisir % » pour changer le chiffre (vrais tracteurs : 5 à 10 %)."/>
+        <text name="fd_opt_flow" text="Débit auto (moissonneuses)"/>
+        <text name="fd_opt_flow_tt" text="La vitesse baisse si la charge moteur dépasse 90 %, puis remonte sous 75 % jusqu'à la vitesse du régulateur."/>
+        <text name="fd_opt_hydraulic" text="Régime hydraulique automatique"/>
+        <text name="fd_opt_hydraulic_tt" text="Le régime monte quand un vérin bouge (chargeur, bras, benne) ou quand une automotrice est en marche."/>
+        <text name="fd_opt_preheat" text="Préchauffage automatique"/>
+        <text name="fd_opt_preheat_tt" text="Sous 5 °C, préchauffage de 2 à 15 s avant de démarrer."/>
+        <text name="fd_opt_cold" text="Protection moteur froid"/>
+        <text name="fd_opt_cold_tt" text="Moteur froid : régime limité à 72 % et rampe 2 maximum (seuil d'ADS s'il est installé)."/>
+        <text name="fd_opt_hud" text="Affichage FlowDrive"/>
+        <text name="fd_opt_hud_tt" text="Petit affichage : rampe, gamme et état de la transmission."/>
+        <text name="fd_opt_hudPos" text="Position de l'affichage"/>
+        <text name="fd_opt_hudPos_tt" text="À droite : au-dessus du compteur. À gauche : au-dessus de la carte."/>
+        <text name="fd_opt_dbl" text="Écrans DashboardLive"/>
+        <text name="fd_opt_dbl_tt" text="Fournit la rampe, la gamme et les voyants aux écrans qui lisaient CVT Addon."/>
+        <text name="fd_not_available" text="Non disponible sur ce véhicule : %s"/>
+        <text name="fd_yes" text="Oui"/>
+        <text name="fd_no" text="Non"/>
+        <text name="fd_off" text="Arrêt"/>
+        <text name="fd_right" text="À droite"/>
+        <text name="fd_left" text="À gauche"/>
+        <text name="fd_range_auto" text="Auto"/>
+        <text name="fd_range_road" text="Route"/>
+        <text name="fd_range_field" text="Champ"/>
+        <text name="fd_range_work" text="Travail"/>
+        <text name="fd_range_harvest" text="Récolte"/>
+        <text name="fd_rpm" text="%d tr/min"/>
+        <text name="fd_ramp_value" text="%d (%s m/s²)"/>
+        <text name="fd_ramp_auto" text="Auto"/>
+        <text name="fd_ramp_autoShort" text="auto %d"/>
+        <text name="fd_boost_pct" text="%d %%"/>
+        <text name="fd_boost_included" text="boost inclus"/>
+        <text name="fd_boost_added" text="boost en plus"/>
+        <text name="fd_boost_prompt" text="Boost en %% (0 à %d, 0 = désactivé)"/>
+        <text name="fd_button_boost" text="Boost : saisir %"/>
+
+        <!-- Raisons -->
+        <text name="fd_reason_noMotor" text="pas de moteur"/>
+        <text name="fd_reason_noCvt" text="boîte à rapports"/>
+        <text name="fd_reason_electric" text="moteur électrique, laissé au jeu"/>
+        <text name="fd_reason_category" text="catégorie %s non gérée"/>
+
+        <!-- Messages -->
+        <text name="fd_msg_notAvailable" text="FlowDrive : non disponible sur ce véhicule (%s)"/>
+        <text name="fd_msg_on" text="FlowDrive : actif"/>
+        <text name="fd_msg_off" text="FlowDrive : coupé (conduite du jeu de base)"/>
+        <text name="fd_msg_ramp" text="FlowDrive : rampe %d (%s m/s²)"/>
+        <text name="fd_msg_range" text="FlowDrive : gamme %s"/>
+        <text name="fd_msg_rangeSpeed" text="FlowDrive : gamme %s (jusqu'à %d km/h)"/>
+        <text name="fd_msg_rangeRefused" text="FlowDrive : ralentis sous %d km/h pour changer de gamme"/>
+        <text name="fd_msg_ptoEcoOn" text="FlowDrive : prise de force éco (régime moteur réduit)"/>
+        <text name="fd_msg_ptoEcoOff" text="FlowDrive : prise de force normale"/>
+        <text name="fd_msg_memOff" text="FlowDrive : régime mémorisé coupé"/>
+        <text name="fd_msg_memOn" text="FlowDrive : régime mémorisé %d (%d tr/min)"/>
+        <text name="fd_msg_memNeed" text="FlowDrive : active d'abord un régime mémorisé"/>
+        <text name="fd_msg_memSet" text="FlowDrive : mémoire %d = %d tr/min"/>
+        <text name="fd_msg_boostOn" text="FlowDrive : boost %d %% (%s), en transport et avec la PdF"/>
+        <text name="fd_msg_boostInvalid" text="FlowDrive : boost refusé, tape un nombre de 0 à %d"/>
+        <text name="fd_msg_rampAuto" text="FlowDrive : rampe auto (suit la situation)"/>
+        <text name="fd_msg_boostOff" text="FlowDrive : boost coupé"/>
+        <text name="fd_msg_flowOnlyHarvester" text="FlowDrive : débit auto seulement sur les moissonneuses"/>
+        <text name="fd_msg_flowOn" text="FlowDrive : débit auto (la vitesse suit la charge moteur)"/>
+        <text name="fd_msg_flowOff" text="FlowDrive : débit auto coupé"/>
+        <text name="fd_msg_preheat" text="FlowDrive : préchauffage %d s (air %d °C)"/>
+        <text name="fd_msg_preheatWarning" text="Préchauffage en cours : %d s"/>
+        <text name="fd_msg_preheatDoneStart" text="FlowDrive : préchauffage terminé, démarrage"/>
+        <text name="fd_msg_preheatDone" text="FlowDrive : préchauffage terminé, tu peux démarrer"/>
+        <text name="fd_msg_warm" text="FlowDrive : moteur chaud, pleine puissance"/>
+        <text name="fd_msg_cold" text="FlowDrive : moteur froid (%d °C), régime limité à %d tr/min jusqu'à %d °C"/>
+        <text name="fd_msg_coldTestRunning" text="FlowDrive : essai froid (-15 °C). Coupe le moteur puis redémarre pour le préchauffage"/>
+        <text name="fd_msg_coldTestOn" text="FlowDrive : essai froid (-15 °C). Démarre le moteur"/>
+        <text name="fd_msg_coldTestOff" text="FlowDrive : essai froid terminé (températures réelles)"/>
+        <text name="fd_msg_saved" text="FlowDrive : réglages enregistrés"/>
+
+        <!-- Affichage -->
+        <text name="fd_hud_line1" text="FlowDrive  ·  rampe %s  ·  %s"/>
+        <text name="fd_hud_off" text="FlowDrive coupé"/>
+        <text name="fd_hud_preheat" text="Préchauffage %d s"/>
+        <text name="fd_hud_cold" text="Moteur froid"/>
+        <text name="fd_hud_pto" text="PdF %d tr/min"/>
+        <text name="fd_hud_ptoEco" text="PdF éco %d tr/min"/>
+        <text name="fd_hud_memory" text="Régime fixe %d tr/min"/>
+        <text name="fd_hud_flow" text="Débit auto %s km/h"/>
+        <text name="fd_hud_droop" text="Limite de charge"/>
+        <text name="fd_hud_hydraulic" text="Hydraulique"/>
+        <text name="fd_hud_working" text="En marche"/>
+        <text name="fd_hud_boost" text="Boost"/>
+        <text name="fd_hud_inching" text="Approche lente"/>
+    </texts>
+</l10n>
