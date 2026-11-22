@@ -13,7 +13,7 @@
 FlowDrive = FlowDrive or {}
 FlowDrive.MOD_NAME = g_currentModName
 FlowDrive.MOD_DIR = g_currentModDirectory
-FlowDrive.VERSION = "1.0.2.0"
+FlowDrive.VERSION = "1.1.0.0"
 FlowDrive.SPEC_NAME = "flowDrive"
 
 -- Ramps: maximum acceleration (m/s2), share of engine speed rise,
@@ -199,6 +199,53 @@ function FlowDrive.saveSettings()
 end
 
 pcall(FlowDrive.loadSettings)
+
+------------------------------------------------------------------------------------------
+-- 1.1.0: multiplayer
+-- The driving law runs on the server only (the game calls the motor hooks there). Players send their
+-- settings and inputs to the server (FlowDriveEvents.lua); the server sends back what the display needs.
+------------------------------------------------------------------------------------------
+
+FlowDrive.SYNC_INTERVAL = 250          -- ms: the server checks at most this often whether the display state changed
+-- General settings that act on the driving law: in multiplayer, those of the server apply to everyone
+FlowDrive.SERVER_RULES = {"hydraulic", "preheat", "coldProtect"}
+FlowDrive.serverRules = nil            -- received from the server (player who is not the server)
+
+function FlowDrive.isMultiplayer()
+    local mission = g_currentMission
+    return mission ~= nil and mission.missionDynamicInfo ~= nil and mission.missionDynamicInfo.isMultiplayer == true
+end
+
+-- "solo", "hote" (player hosting the game), "serveur" (dedicated server) or "joueur" (player who joined)
+function FlowDrive.getRole()
+    if not FlowDrive.isMultiplayer() then
+        return "solo"
+    end
+    if g_server ~= nil then
+        if g_dedicatedServer ~= nil or g_dedicatedServerInfo ~= nil then
+            return "serveur"
+        end
+        return "hote"
+    end
+    return "joueur"
+end
+
+-- Log prefix: unchanged in single player, with the role in multiplayer ("[FlowDrive][joueur]")
+function FlowDrive.logPrefix()
+    if FlowDrive.isMultiplayer() then
+        return "[FlowDrive][" .. FlowDrive.getRole() .. "]"
+    end
+    return "[FlowDrive]"
+end
+
+-- Value of a general setting that acts on the driving law: the server's one for a player who joined
+function FlowDrive.rule(name)
+    if g_server == nil and FlowDrive.serverRules ~= nil and FlowDrive.serverRules[name] ~= nil then
+        return FlowDrive.serverRules[name]
+    end
+    return FlowDrive.settings[name]
+end
+
 FlowDrive.HST_CATEGORIES = {
     FRONTLOADERVEHICLES = true, TELELOADERVEHICLES = true, SKIDSTEERVEHICLES = true,
     WHEELLOADERVEHICLES = true, FORAGEMIXERS = true, FORKLIFTS = true
@@ -358,6 +405,13 @@ if not FlowDrive.hooksInstalled then
     wrapStartAction("actionEventToggleMotorState")
     wrapStartAction("actionEventSetMotorStateOn")
     print("[FlowDrive] version " .. FlowDrive.VERSION .. " chargee")
+    -- 1.1.0: role in the game (solo, host, dedicated server, player), once the mission has started
+    if FSBaseMission ~= nil and type(FSBaseMission.onStartMission) == "function" then
+        FSBaseMission.onStartMission = Utils.appendedFunction(FSBaseMission.onStartMission, function()
+            print(string.format("[FlowDrive] partie lancee : role=%s multijoueur=%s version %s",
+                FlowDrive.getRole(), tostring(FlowDrive.isMultiplayer()), FlowDrive.VERSION))
+        end)
+    end
     -- 0.7.0: neighbouring mods detected (compatibility)
     local function loaded(name)
         return g_modIsLoaded ~= nil and g_modIsLoaded[name] == true

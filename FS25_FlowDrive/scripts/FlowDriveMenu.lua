@@ -165,12 +165,21 @@ function FlowDriveMenu:updateContent()
     end
 
     -- General settings
+    -- 1.1.0: in multiplayer, hydraulics, preheating and cold protection follow the host (greyed out for the others)
+    local fromServer = g_server == nil and FlowDrive.isMultiplayer()
     self.optHydraulic:setTexts(yesNo())
-    self.optHydraulic:setState(boolState(settings.hydraulic))
+    self.optHydraulic:setState(boolState(FlowDrive.rule("hydraulic")))
     self.optPreheat:setTexts(yesNo())
-    self.optPreheat:setState(boolState(settings.preheat))
+    self.optPreheat:setState(boolState(FlowDrive.rule("preheat")))
     self.optCold:setTexts(yesNo())
-    self.optCold:setState(boolState(settings.coldProtect))
+    self.optCold:setState(boolState(FlowDrive.rule("coldProtect")))
+    for _, entry in ipairs({{self.optHydraulic, self.ttHydraulic, "fd_opt_hydraulic_tt"},
+        {self.optPreheat, self.ttPreheat, "fd_opt_preheat_tt"}, {self.optCold, self.ttCold, "fd_opt_cold_tt"}}) do
+        entry[1]:setDisabled(fromServer)
+        if entry[2] ~= nil then
+            entry[2]:setText(FlowDrive.t(fromServer and "fd_opt_serverRule_tt" or entry[3]))
+        end
+    end
     self.optHud:setTexts(yesNo())
     self.optHud:setState(boolState(settings.hud))
     self.optHudPos:setTexts({FlowDrive.t("fd_right"), FlowDrive.t("fd_left")})
@@ -258,15 +267,18 @@ function FlowDriveMenu:onClickApply()
     end
 
     local settings = FlowDrive.settings
-    settings.hydraulic = stateBool(self.optHydraulic)
-    settings.preheat = stateBool(self.optPreheat)
-    settings.coldProtect = stateBool(self.optCold)
+    -- 1.1.0: a player who joined keeps their own values for later (the host's ones apply in this game)
+    if not (g_server == nil and FlowDrive.isMultiplayer()) then
+        settings.hydraulic = stateBool(self.optHydraulic)
+        settings.preheat = stateBool(self.optPreheat)
+        settings.coldProtect = stateBool(self.optCold)
+    end
     settings.hud = stateBool(self.optHud)
     settings.hudPos = self.optHudPos:getState() == 2 and 2 or 1
     settings.dbl = stateBool(self.optDbl)
     pcall(FlowDrive.saveSettings)
 
-    print(string.format("[FlowDrive] menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s puissance jeu=%s ch debit=%s | hydraulique=%s prechauffage=%s froid=%s affichage=%s position=%s dbl=%s",
+    print(FlowDrive.logPrefix() .. string.format(" menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s puissance jeu=%s ch debit=%s | hydraulique=%s prechauffage=%s froid=%s affichage=%s position=%s dbl=%s",
         tostring(s ~= nil and s.enabled), tostring(s ~= nil and s.ramp), tostring(s ~= nil and s.range),
         tostring(s ~= nil and s.ptoEco), tostring(s ~= nil and s.memory), tostring(s ~= nil and s.memRpm[1]),
         tostring(s ~= nil and s.memRpm[2]), tostring(s ~= nil and s.boostEnabled), tostring(s ~= nil and s.boostPct),

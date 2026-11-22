@@ -5,8 +5,8 @@
 Mod pour **Farming Simulator 25** : un comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST). Il s'applique à toutes les machines compatibles, sans rien à acheter ni à configurer.
 
 - Site et assistant boost : **https://dev-velris.github.io/FlowDrive/**
-- Version : **1.0.2.0** ([historique des versions](CHANGELOG.fr.md))
-- Solo uniquement (le multijoueur est prévu en 1.1).
+- Version : **1.1.0.0** ([historique des versions](CHANGELOG.fr.md))
+- Solo et **multijoueur (expérimental depuis la 1.1)**. En multijoueur, le serveur calcule la boîte ; l'hydraulique, le préchauffage et la protection froid suivent les réglages de l'hôte. Merci de [signaler tout problème](https://github.com/DEV-Velris/FlowDrive/issues/new/choose).
 - **Ne pas utiliser avec CVT Addon.** Les deux modifient la même chose. Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
 
 ## Ce que fait le mod

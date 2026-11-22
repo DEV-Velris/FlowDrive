@@ -102,21 +102,21 @@
                 <GuiElement profile="fs25_multiTextOptionContainer">
                     <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_hydraulic"/>
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="optHydraulic">
-                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_hydraulic_tt"/>
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttHydraulic" position="700px 0px" text="$l10n_fd_opt_hydraulic_tt"/>
                     </MultiTextOption>
                 </GuiElement>
 
                 <GuiElement profile="fs25_multiTextOptionContainer">
                     <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_preheat"/>
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="optPreheat">
-                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_preheat_tt"/>
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttPreheat" position="700px 0px" text="$l10n_fd_opt_preheat_tt"/>
                     </MultiTextOption>
                 </GuiElement>
 
                 <GuiElement profile="fs25_multiTextOptionContainer">
                     <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_cold"/>
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="optCold">
-                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_cold_tt"/>
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttCold" position="700px 0px" text="$l10n_fd_opt_cold_tt"/>
                     </MultiTextOption>
                 </GuiElement>
 

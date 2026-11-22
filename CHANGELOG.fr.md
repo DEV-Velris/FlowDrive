@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md) · **Français**
 
+## 1.1.0.0
+- **Multijoueur (expérimental).** Les réglages de chaque machine (touches et menu) sont envoyés au serveur et aux autres joueurs, ainsi qu'au joueur qui rejoint la partie.
+- En multijoueur, le serveur calcule la boîte. Il envoie aux joueurs ce qu'il faut pour l'affichage, DashboardLive et les messages (rampe auto, gamme active, moteur froid, boost, température moteur, préchauffage).
+- L'approche lente et le régime hydraulique automatique fonctionnent aussi pour un joueur qui a rejoint la partie.
+- L'hydraulique, le préchauffage et la protection froid suivent les réglages de l'hôte (grisés dans le menu des autres joueurs).
+- Les messages ne s'affichent plus qu'au joueur assis dans la machine (plus de messages venant de la machine d'un ouvrier).
+- En multijoueur, les lignes du log indiquent le rôle : `[FlowDrive][hote]`, `[FlowDrive][serveur]` ou `[FlowDrive][joueur]`. Rien ne change en solo.
+
 ## 1.0.2.0
 - Le menu affiche la puissance de la machine dans le jeu, sur la ligne « Puissance du jeu (… ch) », pour la comparer à la vraie fiche et choisir le boost.
 - Bulles d'aide du boost mises à jour (vrais boosts : 5 à 20 %).

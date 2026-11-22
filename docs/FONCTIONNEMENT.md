@@ -1,4 +1,4 @@
-# FlowDrive : fonctionnement détaillé (1.0.2)
+# FlowDrive : fonctionnement détaillé (1.1)
 
 ## Principe
 
@@ -93,6 +93,16 @@ Voir [BOOST.md](BOOST.md). Il est actif en PdF, ou en transport au-dessus de 16 
 - **Frein pied levé :** `lowBrakeForceScale` × facteur de rampe × √(masse propre / masse totale) × multiplicateur du profil. Avec EngineBrakeforceCompensation, FlowDrive repart de la valeur d'origine.
 - **DashboardLive :** FlowDrive crée `vehicle.spec_CVTaddon` avec les champs `forDBL_*` que lisent les écrans, seulement si CVT Addon n'est pas là.
 
+## Multijoueur (1.1, expérimental)
+
+- **Qui calcule quoi :** le jeu n'appelle les accroches de boîte que sur le serveur. La loi de conduite (rampes, régime, gammes, boost, débit auto, moteur froid) tourne donc sur le serveur (`self.isServer`). Chez un joueur qui a rejoint la partie, FlowDrive ne fait que l'affichage, DashboardLive et les messages.
+- **Réglages par machine :** `FlowDriveSettingsEvent` (fichier `scripts/FlowDriveEvents.lua`). Le joueur qui change un réglage l'envoie ; le serveur l'applique et le transmet aux autres. Un joueur qui arrive reçoit tous les réglages (`onWriteStream` / `onReadStream`).
+- **Commandes du joueur :** `FlowDriveInputEvent`, du joueur vers le serveur, quand l'approche lente ou un vérin change d'état. Le serveur ne voit pas les commandes de vérin d'un joueur distant, seulement leur position.
+- **État d'affichage :** le serveur compare l'état au plus toutes les 250 ms et ne l'envoie que s'il a changé (`onWriteUpdateStream`) : rampe auto, gamme active, moteur froid, boost appliqué, PdF, régime mémorisé, débit auto, limite de charge, approche, hydraulique, température moteur (arrondie au demi-degré), préchauffage, et les trois réglages de l'hôte.
+- **Préchauffage :** avec la touche de démarrage, la minuterie tourne chez le joueur, puis le moteur démarre par l'événement du jeu. Avec le démarrage automatique, c'est le serveur qui démarre : il fait le préchauffage et l'envoie au joueur.
+- **Réglages généraux :** hydraulique, préchauffage et protection froid agissent sur la conduite ; ceux de l'hôte s'appliquent à tous. Affichage, position et DashboardLive restent propres à chaque joueur.
+- **Log :** en multijoueur, `[FlowDrive][hote]`, `[FlowDrive][serveur]` (serveur dédié) ou `[FlowDrive][joueur]`. Au lancement : `partie lancee : role=… multijoueur=…`. Réglages : `reglages envoyes` et `reglages recus`.
+
 ## Ce qu'on sait du moteur FS25 (mesuré ou lu)
 
 - Les accroches sont appelées à chaque image. La vitesse vaut environ k × régime / rapport.
@@ -101,4 +111,4 @@ Voir [BOOST.md](BOOST.md). Il est actif en PdF, ou en transport au-dessus de 16 
 - Le régime de PdF est imposé dans `VehicleMotor:update` (`getMaxPtoRpm × ptoMotorRpmRatio`).
 - Boîte au neutre, le régime suit max(`lastPtoRpm`, `minRpm`) et ignore `getRequiredMotorRpmRange`.
 - Le jeu appelle `getMotorNotAllowedWarning` aussi pour l'aide des touches : cette fonction ne doit rien déclencher.
-- Multijoueur : la conduite (`updateVehiclePhysics`, donc les accroches de boîte) ne tourne que sur le serveur, et la température moteur du jeu n'est calculée que sur le serveur.
+- Multijoueur : la conduite (`updateVehiclePhysics`, donc les accroches de boîte) ne tourne que sur le serveur, et la température moteur du jeu n'est calculée que sur le serveur (voir la section Multijoueur).

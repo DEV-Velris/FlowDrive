@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="114">
     <author>Velris</author>
-    <version>1.0.2.0</version>
+    <version>1.1.0.0</version>
     <title>
         <en>FlowDrive</en>
         <fr>FlowDrive</fr>
@@ -18,7 +18,7 @@
 
 Settings: Left Shift + Left Alt + T. Every other function can be assigned to a key in the controls menu.
 
-Do not use together with CVT Addon. Single player.]]></en>
+Do not use together with CVT Addon. Multiplayer: experimental (report problems on GitHub, DEV-Velris/FlowDrive).]]></en>
         <fr><![CDATA[Comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST), actif sur toutes les machines compatibles, sans rien à acheter ni à configurer.
 
 - Tracteurs : rampes d'accélération (Auto ou 1 à 4), régime éco, limite de charge, gammes champ et route, frein moteur adapté au poids attelé.
@@ -30,14 +30,16 @@ Do not use together with CVT Addon. Single player.]]></en>
 
 Réglages : Maj gauche + Alt gauche + T. Toutes les autres fonctions peuvent recevoir une touche dans le menu des commandes.
 
-Ne pas utiliser avec CVT Addon. Solo.]]></fr>
+Ne pas utiliser avec CVT Addon. Multijoueur : expérimental (signaler les problèmes sur GitHub, DEV-Velris/FlowDrive).]]></fr>
     </description>
     <iconFilename>icon_flowDrive.dds</iconFilename>
-    <multiplayer supported="false"/>
+    <!-- 1.1.0: multiplayer (experimental): network events in FlowDriveEvents.lua -->
+    <multiplayer supported="true"/>
 
     <extraSourceFiles>
         <sourceFile filename="scripts/FlowDriveMain.lua"/>
         <sourceFile filename="scripts/FlowDriveMenu.lua"/>
+        <sourceFile filename="scripts/FlowDriveEvents.lua"/>
     </extraSourceFiles>
 
     <actions>

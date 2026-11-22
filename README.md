@@ -5,8 +5,8 @@
 A mod for **Farming Simulator 25** that gives continuously variable (CVT) and hydrostatic (HST) transmissions realistic behaviour. It works on every eligible vehicle, with nothing to buy or configure.
 
 - Website and boost assistant: **https://dev-velris.github.io/FlowDrive/**
-- Version: **1.0.2.0** ([changelog](CHANGELOG.md))
-- Single player only (multiplayer is planned for 1.1).
+- Version: **1.1.0.0** ([changelog](CHANGELOG.md))
+- Single player and **multiplayer (experimental since 1.1)**. In multiplayer, the server computes the transmission; hydraulics, preheating and cold protection follow the host's settings. Please [report any problem](https://github.com/DEV-Velris/FlowDrive/issues/new/choose).
 - **Do not use together with CVT Addon.** Both change the same things. When CVT Addon is active on a vehicle, FlowDrive does nothing on it.
 
 ## What it does

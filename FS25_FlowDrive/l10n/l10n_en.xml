@@ -47,6 +47,7 @@
         <text name="fd_opt_preheat_tt" text="Below 5 °C, preheating for 2 to 15 s before starting."/>
         <text name="fd_opt_cold" text="Cold engine protection"/>
         <text name="fd_opt_cold_tt" text="Cold engine: engine speed limited to 72 % and ramp 2 maximum (ADS threshold when installed)."/>
+        <text name="fd_opt_serverRule_tt" text="Multiplayer: this setting follows the game host's setting."/>
         <text name="fd_opt_hud" text="FlowDrive display"/>
         <text name="fd_opt_hud_tt" text="Small display: ramp, range and transmission state."/>
         <text name="fd_opt_hudPos" text="Display position"/>

@@ -2,6 +2,14 @@
 
 **English** · [Français](CHANGELOG.fr.md)
 
+## 1.1.0.0
+- **Multiplayer (experimental).** Per-vehicle settings (keys and menu) are sent to the server and to the other players, and to a player who joins the game.
+- In multiplayer, the server computes the transmission. It sends the players what the display, DashboardLive and the messages need (auto ramp, active range, cold engine, boost, engine temperature, preheating).
+- Inching and automatic hydraulic engine speed also work for a player who joined the game.
+- Hydraulics, preheating and cold protection follow the host's settings (greyed out in the menu for the other players).
+- Messages are only shown to the player sitting in the vehicle (no more messages from an AI worker's vehicle).
+- In multiplayer, log lines show the role: `[FlowDrive][hote]`, `[FlowDrive][serveur]` or `[FlowDrive][joueur]`. Unchanged in single player.
+
 ## 1.0.2.0
 - The menu shows the vehicle's power in the game on the "Game power (… hp)" row, to compare it with the real spec sheet and choose the boost.
 - Boost tooltips updated (real boosts: 5 to 20 %).

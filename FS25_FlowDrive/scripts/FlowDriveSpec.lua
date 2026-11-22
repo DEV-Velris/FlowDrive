@@ -37,8 +37,15 @@ local function safeCall(object, methodName, ...)
     return nil
 end
 
-local function notify(text)
-    if g_currentMission == nil then
+-- 1.1.0: true when the local player sits in this vehicle (false on a dedicated server, for an AI worker,
+-- or for another player's vehicle)
+local function isEnteredLocally(vehicle)
+    return vehicle ~= nil and vehicle.getIsEntered ~= nil and vehicle:getIsEntered() == true
+end
+
+-- 1.1.0: messages only for the player sitting in the vehicle
+local function notify(vehicle, text)
+    if g_currentMission == nil or not isEnteredLocally(vehicle) then
         return
     end
     local hud = g_currentMission.hud
@@ -81,6 +88,11 @@ function FlowDriveSpec.registerEventListeners(vehicleType)
     SpecializationUtil.registerEventListener(vehicleType, "onUpdate", FlowDriveSpec)
     SpecializationUtil.registerEventListener(vehicleType, "onDraw", FlowDriveSpec)
     SpecializationUtil.registerEventListener(vehicleType, "onRegisterActionEvents", FlowDriveSpec)
+    -- 1.1.0: multiplayer
+    SpecializationUtil.registerEventListener(vehicleType, "onReadStream", FlowDriveSpec)
+    SpecializationUtil.registerEventListener(vehicleType, "onWriteStream", FlowDriveSpec)
+    SpecializationUtil.registerEventListener(vehicleType, "onReadUpdateStream", FlowDriveSpec)
+    SpecializationUtil.registerEventListener(vehicleType, "onWriteUpdateStream", FlowDriveSpec)
 end
 
 ------------------------------------------------------------------------------------------
@@ -169,6 +181,20 @@ function FlowDriveSpec:onLoad(savegame)
     s.ambientTemp = nil
     s.fuelRefLevel = nil
     s.fuelWinTime = 0
+    -- 1.1.0: multiplayer. The server sends the display state (s.net) when it changes (dirty flag);
+    -- a player sends the inching key and the cylinder command to the server (netInchHeld, netHydraulic).
+    s.dirtyFlag = self:getNextDirtyFlag()
+    s.syncTimer = 0
+    s.netSent = nil
+    s.net = nil
+    s.netEngineTemp = nil
+    s.netPreheat = 0
+    s.netPreheatShown = 0
+    s.netInchHeld = false
+    s.netHydraulic = false
+    s.inchSent = false
+    s.hydSent = false
+    s.hydClientHold = 0
 end
 
 ------------------------------------------------------------------------------------------
@@ -206,6 +232,12 @@ end
 
 -- Engine temperature (degrees C): from ADS when present, otherwise from the game; the cold test mode simulates it
 function FlowDriveSpec.getEngineTemperature(vehicle, s)
+    -- 1.1.0: a player who is not the server uses the server's value (the game does not send the temperature,
+    -- and the cold test temperature is simulated on the server)
+    if not vehicle.isServer and s.netEngineTemp ~= nil then
+        s.engineTempSource = "serveur"
+        return s.netEngineTemp
+    end
     if s.coldTest and s.coldTestTemp ~= nil then
         s.engineTempSource = "essai"
         return s.coldTestTemp
@@ -239,7 +271,7 @@ function FlowDriveSpec.updatePreheatNeed(vehicle, s)
     if s.preheatTimer > 0 then
         return true
     end
-    if s.preheatDone or not s.enabled or not s.eligible or not FlowDrive.settings.preheat or not isPlayerControlled(vehicle) then
+    if s.preheatDone or not s.enabled or not s.eligible or not FlowDrive.rule("preheat") or not isPlayerControlled(vehicle) then
         return false
     end
     if vehicle.getIsMotorStarted ~= nil and vehicle:getIsMotorStarted() then
@@ -255,10 +287,15 @@ function FlowDriveSpec.updatePreheatNeed(vehicle, s)
         FlowDrive.PREHEAT_MIN, FlowDrive.PREHEAT_MAX)
     s.preheatTimer = duration
     s.preheatTotal = duration
-    notify(FlowDrive.tf("fd_msg_preheat", math.ceil(duration / 1000), math.floor(ambient + 0.5)))
-    print(string.format("[FlowDrive] prechauffage : %s | air %s moteur %s (%s) duree %s ms",
+    notify(vehicle, FlowDrive.tf("fd_msg_preheat", math.ceil(duration / 1000), math.floor(ambient + 0.5)))
+    print(string.format("%s prechauffage : %s | air %s moteur %s (%s) duree %s ms", FlowDrive.logPrefix(),
         tostring(safeCall(vehicle, "getFullName") or "?"), num(ambient, 1), num(engineTemp, 1), s.engineTempSource, num(duration)))
     return true
+end
+
+-- 1.1.0: preheating time left (ms): the local timer, or the server's one (automatic motor start in multiplayer)
+function FlowDriveSpec.getPreheatLeft(s)
+    return math.max(s.preheatTimer or 0, s.netPreheat or 0)
 end
 
 ------------------------------------------------------------------------------------------
@@ -292,8 +329,9 @@ function FlowDriveSpec.updateDbl(vehicle, s)
     -- CVT Addon: 1 = slow range, 2 = road range
     t.forDBL_drivinglevel = s.rangeActive == FlowDrive.RANGE_FIELD and 1 or 2
     t.forDBL_motorcoldlamp = s.cold and 1 or 0
-    t.forDBL_preglowing = s.preheatTimer > 0 and 1 or 0
-    t.forDBL_glowingstate = s.preheatTimer > 0 and 1 or 0
+    local preheating = FlowDriveSpec.getPreheatLeft(s) > 0
+    t.forDBL_preglowing = preheating and 1 or 0
+    t.forDBL_glowingstate = preheating and 1 or 0
     t.forDBL_isvariotm = true
     t.forDBL_vmaxfoward = tostring(math.floor((s.targetSpeed or s.vmax or 0) + 0.5))
     t.forDBL_vmaxbackward = motor ~= nil and motor.maxBackwardSpeed ~= nil and tostring(math.floor(motor.maxBackwardSpeed * 3.6 + 0.5)) or "0"
@@ -324,20 +362,23 @@ function FlowDriveSpec.getHudLines(vehicle, s)
     end
     local line1 = FlowDrive.tf("fd_hud_line1", FlowDriveSpec.getRampLabel(s), FlowDriveSpec.getRangeLabel(s, s.rangeActive))
     local parts = {}
-    if s.preheatTimer > 0 then
-        table.insert(parts, FlowDrive.tf("fd_hud_preheat", math.ceil(s.preheatTimer / 1000)))
+    local preheatLeft = FlowDriveSpec.getPreheatLeft(s)
+    if preheatLeft > 0 then
+        table.insert(parts, FlowDrive.tf("fd_hud_preheat", math.ceil(preheatLeft / 1000)))
     end
-    if s.fixedRpm ~= nil then
-        table.insert(parts, FlowDrive.tf("fd_hud_memory", math.floor(s.fixedRpm + 0.5)))
-    elseif s.work == "pto" and s.requiredMinRpm ~= nil then
-        table.insert(parts, FlowDrive.tf(s.ptoEco and "fd_hud_ptoEco" or "fd_hud_pto", math.floor(s.requiredMinRpm + 0.5)))
-    elseif s.flowMinRatio ~= nil and s.flowSpeed ~= nil then
-        table.insert(parts, FlowDrive.tf("fd_hud_flow", string.format("%.1f", s.flowSpeed)))
-    elseif s.droopActive then
+    -- 1.1.0: the driving state is computed on the server; a player who is not the server shows the received one
+    local n = vehicle.isServer and FlowDriveSpec.buildNetState(s) or s.net or {}
+    if (n.fixedRpm or 0) > 0 then
+        table.insert(parts, FlowDrive.tf("fd_hud_memory", n.fixedRpm))
+    elseif n.pto and (n.ptoRpm or 0) > 0 then
+        table.insert(parts, FlowDrive.tf(s.ptoEco and "fd_hud_ptoEco" or "fd_hud_pto", n.ptoRpm))
+    elseif (n.flowSpeed or 0) > 0 then
+        table.insert(parts, FlowDrive.tf("fd_hud_flow", string.format("%.1f", n.flowSpeed / 10)))
+    elseif n.droop then
         table.insert(parts, FlowDrive.t("fd_hud_droop"))
-    elseif s.inchSpeed ~= nil then
+    elseif n.inch then
         table.insert(parts, FlowDrive.t("fd_hud_inching"))
-    elseif s.hydLevel > 0 then
+    elseif n.hyd then
         table.insert(parts, FlowDrive.t("fd_hud_hydraulic"))
     elseif s.turnedOn then
         table.insert(parts, FlowDrive.t("fd_hud_working"))
@@ -395,7 +436,8 @@ function FlowDriveSpec:getCanMotorRun(superFunc, ...)
         if s.preheatTimer > 0 then
             return false
         end
-        if isAutoMotorStart() and FlowDriveSpec.updatePreheatNeed(self, s) then
+        -- 1.1.0: in automatic motor start, the server starts the engine: it runs the preheating (sent to the player)
+        if self.isServer and isAutoMotorStart() and FlowDriveSpec.updatePreheatNeed(self, s) then
             s.startRequested = true
             return false
         end
@@ -406,8 +448,8 @@ end
 -- The game also calls this function for the key help: it must not trigger anything (1.0.0 bug)
 function FlowDriveSpec:getMotorNotAllowedWarning(superFunc, ...)
     local s = self.spec_flowDrive
-    if s ~= nil and s.preheatTimer > 0 then
-        return FlowDrive.tf("fd_msg_preheatWarning", math.ceil(s.preheatTimer / 1000))
+    if s ~= nil and FlowDriveSpec.getPreheatLeft(s) > 0 then
+        return FlowDrive.tf("fd_msg_preheatWarning", math.ceil(FlowDriveSpec.getPreheatLeft(s) / 1000))
     end
     return superFunc(self, ...)
 end
@@ -419,10 +461,15 @@ function FlowDriveSpec.onStartKey(vehicle)
     if s == nil or (vehicle.getIsMotorStarted ~= nil and vehicle:getIsMotorStarted()) then
         return false
     end
-    if s.preheatTimer > 0 then
+    local preheatLeft = FlowDriveSpec.getPreheatLeft(s)
+    if preheatLeft > 0 then
         s.startRequested = true
-        notify(FlowDrive.tf("fd_msg_preheatWarning", math.ceil(s.preheatTimer / 1000)))
+        notify(vehicle, FlowDrive.tf("fd_msg_preheatWarning", math.ceil(preheatLeft / 1000)))
         return true
+    end
+    -- 1.1.0: in automatic motor start, a player who is not the server lets the server decide
+    if not vehicle.isServer and isAutoMotorStart() then
+        return false
     end
     if FlowDriveSpec.updatePreheatNeed(vehicle, s) then
         s.startRequested = true
@@ -707,12 +754,19 @@ local function scan(vehicle, s)
     local cvtAddon = isCvtAddonActive(vehicle)
     if cvtAddon and not s.cvtAddonLogged then
         s.cvtAddonLogged = true
-        print("[FlowDrive] CVT Addon actif sur " .. tostring(safeCall(vehicle, "getFullName") or "?") .. " : FlowDrive n'intervient pas")
+        print(FlowDrive.logPrefix() .. " CVT Addon actif sur " .. tostring(safeCall(vehicle, "getFullName") or "?") .. " : FlowDrive n'intervient pas")
     end
     s.active = s.enabled and s.eligible and not cvtAddon
     if s.active ~= wasActive then
         s.rpmCap = nil
         s.droopTimer = 0
+    end
+    -- 0.3.0: self-propelled machine running (mixing, tilling) without a PTO speed: hydraulic engine speed
+    s.turnedOn = vehicle.spec_turnOnVehicle ~= nil and safeCall(vehicle, "getIsTurnedOn") == true
+    -- 1.1.0: a player who is not the server stops here: work, auto ramp and boost are computed by the server
+    -- and received with the display state
+    if not vehicle.isServer then
+        return
     end
     -- 0.1.5: weaker engine braking with an attached load
     local ownMass = safeCall(vehicle, "getTotalMass", true)
@@ -729,8 +783,6 @@ local function scan(vehicle, s)
     else
         s.work = "transport"
     end
-    -- 0.3.0: self-propelled machine running (mixing, tilling) without a PTO speed: hydraulic engine speed
-    s.turnedOn = vehicle.spec_turnOnVehicle ~= nil and safeCall(vehicle, "getIsTurnedOn") == true
 
     -- 0.8.0: auto ramp, chosen from the situation, changed only when it lasts RAMP_AUTO_HOLD
     local autoWanted
@@ -821,6 +873,302 @@ function FlowDriveSpec.getRampLabel(s)
 end
 
 ------------------------------------------------------------------------------------------
+-- 1.1.0: multiplayer
+-- Settings (keys, menu): FlowDriveSettingsEvent, and onWriteStream / onReadStream for a player who joins.
+-- Display state (server -> players): onWriteUpdateStream / onReadUpdateStream, sent only when it changes.
+------------------------------------------------------------------------------------------
+
+local MAX_RPM_NET = 8191        -- 13 bits
+
+-- Per-vehicle settings, as sent over the network
+function FlowDriveSpec.getSettingsData(s)
+    return {
+        enabled = s.enabled == true,
+        ramp = s.ramp or FlowDrive.RAMP_AUTO,
+        range = s.range or FlowDrive.RANGE_AUTO,
+        ptoEco = s.ptoEco == true,
+        memory = s.memory or 0,
+        mem1 = math.floor((s.memRpm[1] or 0) + 0.5),
+        mem2 = math.floor((s.memRpm[2] or 0) + 0.5),
+        boostEnabled = s.boostEnabled == true,
+        boostPct = math.floor(s.boostPct or FlowDrive.BOOST_DEFAULT_PCT),
+        boostIncluded = s.boostIncluded ~= false,
+        flowEnabled = s.flowEnabled ~= false,
+        coldTest = s.coldTest == true
+    }
+end
+
+function FlowDriveSpec.writeSettings(streamId, d)
+    streamWriteBool(streamId, d.enabled)
+    streamWriteUIntN(streamId, clamp(d.ramp, 0, 7), 3)
+    streamWriteUIntN(streamId, clamp(d.range, 0, 3), 2)
+    streamWriteBool(streamId, d.ptoEco)
+    streamWriteUIntN(streamId, clamp(d.memory, 0, 3), 2)
+    streamWriteUIntN(streamId, clamp(d.mem1, 0, MAX_RPM_NET), 13)
+    streamWriteUIntN(streamId, clamp(d.mem2, 0, MAX_RPM_NET), 13)
+    streamWriteBool(streamId, d.boostEnabled)
+    streamWriteUIntN(streamId, clamp(d.boostPct, 0, 63), 6)
+    streamWriteBool(streamId, d.boostIncluded)
+    streamWriteBool(streamId, d.flowEnabled)
+    streamWriteBool(streamId, d.coldTest)
+end
+
+function FlowDriveSpec.readSettings(streamId)
+    local d = {}
+    d.enabled = streamReadBool(streamId)
+    d.ramp = streamReadUIntN(streamId, 3)
+    d.range = streamReadUIntN(streamId, 2)
+    d.ptoEco = streamReadBool(streamId)
+    d.memory = streamReadUIntN(streamId, 2)
+    d.mem1 = streamReadUIntN(streamId, 13)
+    d.mem2 = streamReadUIntN(streamId, 13)
+    d.boostEnabled = streamReadBool(streamId)
+    d.boostPct = streamReadUIntN(streamId, 6)
+    d.boostIncluded = streamReadBool(streamId)
+    d.flowEnabled = streamReadBool(streamId)
+    d.coldTest = streamReadBool(streamId)
+    return d
+end
+
+-- Applies settings received from the network (event, or initial state of a player who joins)
+function FlowDriveSpec.applySettingsData(vehicle, d, fromEvent)
+    local s = vehicle.spec_flowDrive
+    if s == nil or d == nil then
+        return
+    end
+    s.enabled = d.enabled == true
+    s.ramp = clamp(d.ramp or FlowDrive.RAMP_AUTO, 0, #FlowDrive.RAMPS)
+    s.range = clamp(d.range or FlowDrive.RANGE_AUTO, 0, 2)
+    s.ptoEco = d.ptoEco == true
+    s.memory = clamp(d.memory or 0, 0, 2)
+    if (d.mem1 or 0) > 0 then
+        s.memRpm[1] = d.mem1
+    end
+    if (d.mem2 or 0) > 0 then
+        s.memRpm[2] = d.mem2
+    end
+    s.boostEnabled = d.boostEnabled == true
+    if (d.boostPct or 0) > 0 then
+        s.boostPct = clamp(d.boostPct, 1, FlowDrive.BOOST_MAX_PCT)
+    end
+    s.boostIncluded = d.boostIncluded ~= false
+    s.flowEnabled = d.flowEnabled ~= false
+    if (d.coldTest == true) ~= (s.coldTest == true) then
+        -- same reset as the cold test key
+        s.coldTest = d.coldTest == true
+        s.coldTestTemp = nil
+        s.preheatDone = false
+        s.preheatTimer = 0
+    end
+    scan(vehicle, s)
+    if fromEvent then
+        print(string.format("%s reglages recus : %s | actif=%s rampe=%d gamme=%d pdfEco=%s memoire=%d M1=%s M2=%s boost=%s %d%% inclus=%s debit=%s essaiFroid=%s",
+            FlowDrive.logPrefix(), tostring(safeCall(vehicle, "getFullName") or "?"), tostring(s.enabled), s.ramp, s.range,
+            tostring(s.ptoEco), s.memory, num(s.memRpm[1]), num(s.memRpm[2]), tostring(s.boostEnabled), s.boostPct or 0,
+            tostring(s.boostIncluded), tostring(s.flowEnabled), tostring(s.coldTest)))
+    end
+end
+
+-- Sends the vehicle settings after a key or the menu (nothing in single player)
+function FlowDriveSpec.sendSettings(vehicle)
+    if not FlowDrive.isMultiplayer() or FlowDriveSettingsEvent == nil then
+        return
+    end
+    FlowDriveSettingsEvent.sendEvent(vehicle)
+    print(string.format("%s reglages envoyes : %s", FlowDrive.logPrefix(), tostring(safeCall(vehicle, "getFullName") or "?")))
+end
+
+-- Display state computed by the server: what the HUD, DashboardLive and the messages need.
+-- Values are rounded so that small variations do not resend it.
+local NET_KEYS = {"rampAuto", "rangeActive", "cold", "boost", "pto", "ptoRpm", "fixedRpm", "flowSpeed", "droop",
+    "inch", "hyd", "engineTemp", "preheat", "ruleHydraulic", "rulePreheat", "ruleCold"}
+
+function FlowDriveSpec.buildNetState(s)
+    local pto = s.work == "pto" and s.requiredMinRpm ~= nil
+    return {
+        rampAuto = clamp(s.rampAuto or 0, 0, #FlowDrive.RAMPS),
+        rangeActive = clamp(s.rangeActive or FlowDrive.RANGE_ROAD, 0, 2),
+        cold = s.cold == true,
+        boost = s.boostApplied == true,
+        pto = pto,
+        ptoRpm = pto and clamp(math.floor(s.requiredMinRpm + 0.5), 0, MAX_RPM_NET) or 0,
+        fixedRpm = s.fixedRpm ~= nil and clamp(math.floor(s.fixedRpm + 0.5), 0, MAX_RPM_NET) or 0,
+        flowSpeed = (s.flowMinRatio ~= nil and s.flowSpeed ~= nil) and clamp(math.floor(s.flowSpeed * 10 + 0.5), 0, 1023) or 0,
+        droop = s.droopActive == true,
+        inch = s.inchSpeed ~= nil,
+        hyd = (s.hydLevel or 0) > 0,
+        engineTemp = s.engineTemp ~= nil and math.floor(s.engineTemp * 2 + 0.5) / 2 or nil,
+        preheat = s.preheatTimer > 0 and clamp(math.ceil(s.preheatTimer / 100), 1, 255) or 0,
+        ruleHydraulic = FlowDrive.settings.hydraulic == true,
+        rulePreheat = FlowDrive.settings.preheat == true,
+        ruleCold = FlowDrive.settings.coldProtect == true
+    }
+end
+
+local function sameNetState(a, b)
+    if a == nil or b == nil then
+        return false
+    end
+    for _, key in ipairs(NET_KEYS) do
+        if a[key] ~= b[key] then
+            return false
+        end
+    end
+    return true
+end
+
+function FlowDriveSpec.writeNetState(streamId, n)
+    streamWriteUIntN(streamId, n.rampAuto, 3)
+    streamWriteUIntN(streamId, n.rangeActive, 2)
+    streamWriteBool(streamId, n.cold)
+    streamWriteBool(streamId, n.boost)
+    streamWriteBool(streamId, n.pto)
+    streamWriteUIntN(streamId, n.ptoRpm, 13)
+    streamWriteUIntN(streamId, n.fixedRpm, 13)
+    streamWriteUIntN(streamId, n.flowSpeed, 10)
+    streamWriteBool(streamId, n.droop)
+    streamWriteBool(streamId, n.inch)
+    streamWriteBool(streamId, n.hyd)
+    if streamWriteBool(streamId, n.engineTemp ~= nil) then
+        streamWriteFloat32(streamId, n.engineTemp)
+    end
+    streamWriteUIntN(streamId, n.preheat, 8)
+    streamWriteBool(streamId, n.ruleHydraulic)
+    streamWriteBool(streamId, n.rulePreheat)
+    streamWriteBool(streamId, n.ruleCold)
+end
+
+function FlowDriveSpec.readNetState(streamId)
+    local n = {}
+    n.rampAuto = streamReadUIntN(streamId, 3)
+    n.rangeActive = streamReadUIntN(streamId, 2)
+    n.cold = streamReadBool(streamId)
+    n.boost = streamReadBool(streamId)
+    n.pto = streamReadBool(streamId)
+    n.ptoRpm = streamReadUIntN(streamId, 13)
+    n.fixedRpm = streamReadUIntN(streamId, 13)
+    n.flowSpeed = streamReadUIntN(streamId, 10)
+    n.droop = streamReadBool(streamId)
+    n.inch = streamReadBool(streamId)
+    n.hyd = streamReadBool(streamId)
+    if streamReadBool(streamId) then
+        n.engineTemp = streamReadFloat32(streamId)
+    end
+    n.preheat = streamReadUIntN(streamId, 8)
+    n.ruleHydraulic = streamReadBool(streamId)
+    n.rulePreheat = streamReadBool(streamId)
+    n.ruleCold = streamReadBool(streamId)
+    return n
+end
+
+-- Player side: the received state replaces what only the server can compute
+local function applyNetState(s, n)
+    s.net = n
+    s.rampAuto = n.rampAuto > 0 and n.rampAuto or nil
+    s.rangeActive = n.rangeActive
+    s.cold = n.cold
+    s.boostApplied = n.boost
+    s.netEngineTemp = n.engineTemp
+    s.netPreheat = n.preheat * 100
+    FlowDrive.serverRules = {hydraulic = n.ruleHydraulic, preheat = n.rulePreheat, coldProtect = n.ruleCold}
+end
+
+-- Server side: marks the vehicle for sending when its display state changed (at most every SYNC_INTERVAL)
+local function serverSync(vehicle, s, dt)
+    s.syncTimer = (s.syncTimer or 0) - dt
+    if s.syncTimer > 0 or not FlowDrive.isMultiplayer() then
+        return
+    end
+    s.syncTimer = FlowDrive.SYNC_INTERVAL
+    local now = FlowDriveSpec.buildNetState(s)
+    if not sameNetState(now, s.netSent) then
+        s.netSent = now
+        vehicle:raiseDirtyFlags(s.dirtyFlag)
+    end
+end
+
+-- Player side (not the server): inching key and cylinder command sent to the server when they change.
+-- The cylinder command is kept 300 ms so that an analog stick near the threshold does not flood the network.
+local function updateClientInput(vehicle, s, dt)
+    local entered = isEnteredLocally(vehicle)
+    if entered and FlowDrive.rule("hydraulic") and getHydraulicCommand(vehicle) > FlowDrive.HYD_COMMAND_MIN then
+        s.hydClientHold = 300
+    else
+        s.hydClientHold = math.max(0, (s.hydClientHold or 0) - dt)
+    end
+    local hyd = entered and s.hydClientHold > 0
+    local inch = entered and s.inchHeld == true
+    if hyd ~= (s.hydSent == true) or inch ~= (s.inchSent == true) then
+        s.hydSent = hyd
+        s.inchSent = inch
+        if FlowDriveInputEvent ~= nil then
+            FlowDriveInputEvent.sendEvent(vehicle, inch, hyd)
+        end
+    end
+end
+
+-- Messages that follow the state computed by the server (cold engine, preheating in automatic start).
+-- Shown only to the player sitting in the vehicle (notify checks it).
+local function updateMessages(vehicle, s, motorOn)
+    if s.cold then
+        if motorOn and s.active and not s.coldNotified then
+            s.coldNotified = true
+            notify(vehicle, FlowDrive.tf("fd_msg_cold", math.floor((s.engineTemp or 0) + 0.5), math.floor((s.coldCap or 0) + 0.5),
+                (s.coldLimit or FlowDrive.COLD_TEMP_DEFAULT) + FlowDrive.COLD_HYSTERESIS))
+        end
+    elseif s.coldNotified then
+        s.coldNotified = false
+        if motorOn and s.active then
+            notify(vehicle, FlowDrive.t("fd_msg_warm"))
+        end
+    end
+    if not vehicle.isServer then
+        local net = s.netPreheat or 0
+        if net > 0 and (s.netPreheatShown or 0) == 0 and s.preheatTimer <= 0 then
+            local ambient = FlowDriveSpec.getAmbientTemperature(s)
+            notify(vehicle, FlowDrive.tf("fd_msg_preheat", math.ceil(net / 1000), math.floor((ambient or 0) + 0.5)))
+        elseif net == 0 and (s.netPreheatShown or 0) > 0 then
+            notify(vehicle, FlowDrive.t("fd_msg_preheatDoneStart"))
+        end
+        s.netPreheatShown = net
+    end
+end
+
+-- Initial state for a player who joins the game (server writes, player reads)
+function FlowDriveSpec:onWriteStream(streamId, connection)
+    local s = self.spec_flowDrive
+    FlowDriveSpec.writeSettings(streamId, FlowDriveSpec.getSettingsData(s))
+    FlowDriveSpec.writeNetState(streamId, FlowDriveSpec.buildNetState(s))
+end
+
+function FlowDriveSpec:onReadStream(streamId, connection)
+    local s = self.spec_flowDrive
+    local d = FlowDriveSpec.readSettings(streamId)
+    local n = FlowDriveSpec.readNetState(streamId)
+    FlowDriveSpec.applySettingsData(self, d, false)
+    applyNetState(s, n)
+end
+
+-- Display state, server -> players, when serverSync raised the dirty flag
+function FlowDriveSpec:onWriteUpdateStream(streamId, connection, dirtyMask)
+    local s = self.spec_flowDrive
+    if not connection:getIsServer() then
+        if streamWriteBool(streamId, bitAND(dirtyMask, s.dirtyFlag) ~= 0) then
+            FlowDriveSpec.writeNetState(streamId, s.netSent or FlowDriveSpec.buildNetState(s))
+        end
+    end
+end
+
+function FlowDriveSpec:onReadUpdateStream(streamId, timestamp, connection)
+    local s = self.spec_flowDrive
+    if connection:getIsServer() then
+        if streamReadBool(streamId) then
+            applyNetState(s, FlowDriveSpec.readNetState(streamId))
+        end
+    end
+end
+
+------------------------------------------------------------------------------------------
 -- Driving law
 ------------------------------------------------------------------------------------------
 
@@ -878,7 +1226,9 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
 
     -- 0.5.0: temperatures, preheating, cold engine (before the rest: the engine may be off)
     local motorOn = self.getIsMotorStarted ~= nil and self:getIsMotorStarted()
-    if s.coldTest then
+    local isServer = self.isServer
+    -- 1.1.0: the cold test engine is simulated on the server (players receive its temperature)
+    if s.coldTest and isServer then
         if s.coldTestTemp == nil then
             s.coldTestTemp = FlowDrive.COLDTEST_AMBIENT
         end
@@ -913,30 +1263,29 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
                     s.preheatTimer = 0
                     s.preheatDone = true
                     if s.startRequested and self.startMotor ~= nil then
-                        notify(FlowDrive.t("fd_msg_preheatDoneStart"))
+                        notify(self, FlowDrive.t("fd_msg_preheatDoneStart"))
                         pcall(self.startMotor, self)
                     else
-                        notify(FlowDrive.t("fd_msg_preheatDone"))
+                        notify(self, FlowDrive.t("fd_msg_preheatDone"))
                     end
                     s.startRequested = false
                 end
             end
         end
     end
-    -- cold engine: ADS threshold when present, with a little hysteresis
+    -- cold engine: ADS threshold when present, with a little hysteresis.
+    -- 1.1.0: decided by the server; a player receives s.cold with the display state.
     local coldLimit = self.spec_AdvancedDamageSystem ~= nil and FlowDrive.COLD_TEMP_ADS or FlowDrive.COLD_TEMP_DEFAULT
-    if s.engineTemp ~= nil and FlowDrive.settings.coldProtect then
-        if s.cold and s.engineTemp >= coldLimit + FlowDrive.COLD_HYSTERESIS then
-            s.cold = false
-            if motorOn and s.active then
-                notify(FlowDrive.t("fd_msg_warm"))
+    if isServer then
+        if s.engineTemp ~= nil and FlowDrive.settings.coldProtect then
+            if s.cold and s.engineTemp >= coldLimit + FlowDrive.COLD_HYSTERESIS then
+                s.cold = false
+            elseif not s.cold and s.engineTemp < coldLimit then
+                s.cold = true
             end
-        elseif not s.cold and s.engineTemp < coldLimit then
-            s.cold = true
-            s.coldNotified = false
+        else
+            s.cold = false
         end
-    else
-        s.cold = false
     end
     s.coldLimit = coldLimit
     local baseRamp = FlowDriveSpec.getBaseRamp(s)
@@ -946,10 +1295,21 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.coldCap = math.max(s.ratedRpm * FlowDrive.COLD_RPM_SHARE, s.idleRpm + 200)
     end
     FlowDriveSpec.updateDbl(self, s)
-    if s.cold and motorOn and s.active and not s.coldNotified then
-        s.coldNotified = true
-        notify(FlowDrive.tf("fd_msg_cold", math.floor((s.engineTemp or 0) + 0.5), math.floor((s.coldCap or 0) + 0.5),
-            coldLimit + FlowDrive.COLD_HYSTERESIS))
+    updateMessages(self, s, motorOn)
+
+    -- 1.1.0: a player who is not the server stops here. The game only calls the motor hooks on the server,
+    -- so the driving law runs there; the player sends its inching key and cylinder command.
+    if not isServer then
+        updateClientInput(self, s, dt)
+        s.targetSpeed = s.rangeActive == FlowDrive.RANGE_FIELD and s.fieldSpeed or s.vmax
+        s.mode = (not s.active and "inactif") or (motorOn and "calcule par le serveur") or "moteur arrete"
+        FlowDriveSpec.updateDisplay(self, s, motor, dt, nil)
+        return
+    end
+    -- inputs of a player who left the vehicle are forgotten
+    if not isPlayerControlled(self) then
+        s.netInchHeld = false
+        s.netHydraulic = false
     end
 
     if not s.active or (self.getIsMotorStarted ~= nil and not self:getIsMotorStarted()) then
@@ -964,6 +1324,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.flowSpeed = nil
         s.flowLimited = false
         s.mode = s.active and "moteur arrete" or "inactif"
+        serverSync(self, s, dt)
         FlowDriveSpec.updateDisplay(self, s, motor, dt, nil)
         return
     end
@@ -1015,7 +1376,8 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
 
     -- 0.3.0: hydraulic engine speed. A moving cylinder (or a running self-propelled machine) raises engine speed,
     -- held HYD_HOLD ms after the movement, then it falls back over HYD_FALL ms.
-    s.hydCommand = FlowDrive.settings.hydraulic and getHydraulicCommand(self) or 0
+    -- 1.1.0: plus the command of a remote player (the server only sees the positions of its cylinders)
+    s.hydCommand = FlowDrive.settings.hydraulic and math.max(getHydraulicCommand(self), s.netHydraulic and 1 or 0) or 0
     if s.hydCommand > FlowDrive.HYD_COMMAND_MIN then
         s.hydLevel = 1
         s.hydHold = FlowDrive.HYD_HOLD
@@ -1038,7 +1400,8 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     -- 0.3.0: inching (key held): top speed drops by INCH_RATE km/h per second,
     -- engine speed stays at its value when inching started (to keep fast hydraulics)
     s.inchMinRatio = nil
-    if s.inchHeld and s.k ~= nil and s.k > 0 then
+    -- 1.1.0: key of the host, or of a remote player (netInchHeld)
+    if (s.inchHeld or s.netInchHeld) and s.k ~= nil and s.k > 0 then
         if s.inchSpeed == nil then
             s.inchSpeed = math.max(speed, FlowDrive.INCH_MIN_SPEED)
             s.inchRpm = clamp(math.max(rpm, hydFloor or 0), idle, rated)
@@ -1220,6 +1583,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     local tau = target > s.rpmCap and FlowDrive.CAP_RISE_TIME or FlowDrive.CAP_FALL_TIME
     s.rpmCap = s.rpmCap + (target - s.rpmCap) * math.min(1, dt / tau)
 
+    serverSync(self, s, dt)
     FlowDriveSpec.updateDisplay(self, s, motor, dt, {speed = speed, rpm = rpm, pedal = pedal, gearRatio = gearRatio, ecoMin = ecoMin})
 end
 
@@ -1271,7 +1635,7 @@ function FlowDriveSpec.updateDisplay(vehicle, s, motor, dt, m)
     if s.logTimer <= 0 and m ~= nil then
         s.logTimer = LOG_INTERVAL
         local powerShare = getPowerShare(vehicle, s, s.rpmCap)
-        print(string.format("[FlowDrive] %s | R%s%s %s/%s %s | mode=%s v=%s/%s a=%s rpm=%s cap=%s load=%s ped=%s ratio=%s k=%s brake=%s pw=%s",
+        print(FlowDrive.logPrefix() .. string.format(" %s | R%s%s %s/%s %s | mode=%s v=%s/%s a=%s rpm=%s cap=%s load=%s ped=%s ratio=%s k=%s brake=%s pw=%s",
             tostring(safeCall(vehicle, "getFullName") or "?"), tostring(s.rampEff or FlowDriveSpec.getBaseRamp(s)),
             s.ramp == FlowDrive.RAMP_AUTO and "a" or "", rangeName(s, s.range),
             rangeName(s, s.rangeActive), s.work, s.mode, num(m.speed, 1), num(s.targetSpeed, 1),
@@ -1299,12 +1663,13 @@ function FlowDriveSpec:onDraw(isActiveForInput, isActiveForInputIgnoreSelection,
     if FlowDrive.settings.hud and isActiveForInputIgnoreSelection then
         FlowDriveSpec.drawHud(self, s)
     end
-    -- 0.5.0: preheating lamp, always visible
-    if s.preheatTimer > 0 then
+    -- 0.5.0: preheating lamp, always visible (1.1.0: also the server's preheating in automatic start)
+    local preheatLeft = FlowDriveSpec.getPreheatLeft(s)
+    if preheatLeft > 0 then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextBold(true)
         setTextColor(1, 0.6, 0.1, 1)
-        renderText(0.5, 0.2, 0.022, string.format("PRECHAUFFAGE  %d s", math.ceil(s.preheatTimer / 1000)))
+        renderText(0.5, 0.2, 0.022, string.format("PRECHAUFFAGE  %d s", math.ceil(preheatLeft / 1000)))
         setTextBold(false)
         setTextColor(1, 1, 1, 1)
         setTextAlignment(RenderText.ALIGN_LEFT)
@@ -1378,11 +1743,12 @@ function FlowDriveSpec.actionColdTest(self, actionName, inputValue, callbackStat
     s.coldTestTemp = nil
     s.preheatDone = false
     s.preheatTimer = 0
+    FlowDriveSpec.sendSettings(self)
     if s.coldTest then
         local motorOn = self.getIsMotorStarted ~= nil and self:getIsMotorStarted()
-        notify(FlowDrive.t(motorOn and "fd_msg_coldTestRunning" or "fd_msg_coldTestOn"))
+        notify(self, FlowDrive.t(motorOn and "fd_msg_coldTestRunning" or "fd_msg_coldTestOn"))
     else
-        notify(FlowDrive.t("fd_msg_coldTestOff"))
+        notify(self, FlowDrive.t("fd_msg_coldTestOff"))
     end
 end
 
@@ -1392,11 +1758,12 @@ function FlowDriveSpec.actionFlow(self, actionName, inputValue, callbackState, i
         return
     end
     if s.profile ~= "harvester" then
-        notify(FlowDrive.t("fd_msg_flowOnlyHarvester"))
+        notify(self, FlowDrive.t("fd_msg_flowOnlyHarvester"))
         return
     end
     s.flowEnabled = not s.flowEnabled
-    notify(FlowDrive.t(s.flowEnabled and "fd_msg_flowOn" or "fd_msg_flowOff"))
+    FlowDriveSpec.sendSettings(self)
+    notify(self, FlowDrive.t(s.flowEnabled and "fd_msg_flowOn" or "fd_msg_flowOff"))
 end
 
 function FlowDriveSpec.actionInching(self, actionName, inputValue, callbackState, isAnalog)
@@ -1404,6 +1771,7 @@ function FlowDriveSpec.actionInching(self, actionName, inputValue, callbackState
     if s == nil then
         return
     end
+    -- 1.1.0: a player who is not the server sends it from onUpdate (updateClientInput)
     s.inchHeld = (inputValue or 0) > 0
 end
 
@@ -1411,7 +1779,7 @@ end
 function FlowDriveSpec.canChangeRange(vehicle, s)
     local speed = safeCall(vehicle, "getLastSpeed") or 0
     if speed > FlowDrive.RANGE_CHANGE_MAX_SPEED then
-        notify(FlowDrive.tf("fd_msg_rangeRefused", FlowDrive.RANGE_CHANGE_MAX_SPEED))
+        notify(vehicle, FlowDrive.tf("fd_msg_rangeRefused", FlowDrive.RANGE_CHANGE_MAX_SPEED))
         return false
     end
     return true
@@ -1432,8 +1800,9 @@ function FlowDriveSpec.onSettingsChanged(vehicle)
         return
     end
     s.rpmCap = nil
-    s.preheatDone = s.preheatDone or not FlowDrive.settings.preheat
+    s.preheatDone = s.preheatDone or not FlowDrive.rule("preheat")
     scan(vehicle, s)
+    FlowDriveSpec.sendSettings(vehicle)
 end
 
 function FlowDriveSpec.actionToggle(self, actionName, inputValue, callbackState, isAnalog)
@@ -1442,12 +1811,13 @@ function FlowDriveSpec.actionToggle(self, actionName, inputValue, callbackState,
         return
     end
     if not s.eligible then
-        notify(FlowDrive.tf("fd_msg_notAvailable", FlowDriveSpec.getReasonText(s)))
+        notify(self, FlowDrive.tf("fd_msg_notAvailable", FlowDriveSpec.getReasonText(s)))
         return
     end
     s.enabled = not s.enabled
     scan(self, s)
-    notify(FlowDrive.t(s.enabled and "fd_msg_on" or "fd_msg_off"))
+    FlowDriveSpec.sendSettings(self)
+    notify(self, FlowDrive.t(s.enabled and "fd_msg_on" or "fd_msg_off"))
 end
 
 function FlowDriveSpec.actionRamp(self, actionName, inputValue, callbackState, isAnalog)
@@ -1457,11 +1827,12 @@ function FlowDriveSpec.actionRamp(self, actionName, inputValue, callbackState, i
     end
     -- 0.8.0: auto -> 1 -> 2 -> 3 -> 4 -> auto
     s.ramp = (s.ramp + 1) % (#FlowDrive.RAMPS + 1)
+    FlowDriveSpec.sendSettings(self)
     if s.ramp == FlowDrive.RAMP_AUTO then
-        notify(FlowDrive.t("fd_msg_rampAuto"))
+        notify(self, FlowDrive.t("fd_msg_rampAuto"))
     else
         local ramp = FlowDrive.RAMPS[s.ramp]
-        notify(FlowDrive.tf("fd_msg_ramp", s.ramp, num(ramp.accel, 1)))
+        notify(self, FlowDrive.tf("fd_msg_ramp", s.ramp, num(ramp.accel, 1)))
     end
 end
 
@@ -1474,10 +1845,11 @@ function FlowDriveSpec.actionRange(self, actionName, inputValue, callbackState, 
         return
     end
     s.range = (s.range + 1) % 3
+    FlowDriveSpec.sendSettings(self)
     if s.range == FlowDrive.RANGE_FIELD and s.fieldSpeed ~= nil then
-        notify(FlowDrive.tf("fd_msg_rangeSpeed", FlowDriveSpec.getRangeLabel(s, s.range), s.fieldSpeed))
+        notify(self, FlowDrive.tf("fd_msg_rangeSpeed", FlowDriveSpec.getRangeLabel(s, s.range), s.fieldSpeed))
     else
-        notify(FlowDrive.tf("fd_msg_range", FlowDriveSpec.getRangeLabel(s, s.range)))
+        notify(self, FlowDrive.tf("fd_msg_range", FlowDriveSpec.getRangeLabel(s, s.range)))
     end
 end
 
@@ -1491,13 +1863,13 @@ function FlowDriveSpec.actionDebug(self, actionName, inputValue, callbackState, 
     s.logTimer = 0
     scan(self, s)
     if s.debug then
-        print(string.format("[FlowDrive] reglage ouvert : %s | actif=%s eligible=%s (%s) rampe=%d gamme=%s | vmax=%s champ=%s regime %s-%s couple maxi %s plancher limite %s k=%s frein moteur d'origine %s",
+        print(FlowDrive.logPrefix() .. string.format(" reglage ouvert : %s | actif=%s eligible=%s (%s) rampe=%d gamme=%s | vmax=%s champ=%s regime %s-%s couple maxi %s plancher limite %s k=%s frein moteur d'origine %s",
             tostring(safeCall(self, "getFullName") or "?"), tostring(s.active), tostring(s.eligible), s.reason, s.ramp,
             rangeName(s, s.range), num(s.vmax, 1), num(s.fieldSpeed),
             num(s.idleRpm), num(s.ratedRpm), num(s.peakTorqueRpm), num(s.droopFloorRpm), num(s.k, 3), num(s.originalBrakeScale, 3)))
         local motorized = self.spec_motorized
         local motor = motorized ~= nil and motorized.motor or nil
-        print(string.format("[FlowDrive] etape 2 : PdF eco=%s rapport PdF %s (origine %s) M1=%s M2=%s boost=%s %s %% %s (couple x%.3f) puissance maxi %s ch",
+        print(FlowDrive.logPrefix() .. string.format(" etape 2 : PdF eco=%s rapport PdF %s (origine %s) M1=%s M2=%s boost=%s %s %% %s (couple x%.3f) puissance maxi %s ch",
             tostring(s.ptoEco), num(motor ~= nil and motor.ptoMotorRpmRatio or nil, 3), num(s.basePtoRatio, 3),
             num(s.memRpm[1]), num(s.memRpm[2]), tostring(s.boostEnabled), tostring(s.boostPct),
             s.boostIncluded and "inclus" or "en plus", s.torqueFactor or 1,
@@ -1510,16 +1882,16 @@ function FlowDriveSpec.actionDebug(self, actionName, inputValue, callbackState, 
             end
             table.sort(fuels)
         end
-        print(string.format("[FlowDrive] etape 3 : profil=%s categorie=%s regime hydraulique=%s frein pied leve x%s carburants=%s",
+        print(FlowDrive.logPrefix() .. string.format(" etape 3 : profil=%s categorie=%s regime hydraulique=%s frein pied leve x%s carburants=%s",
             s.profile, tostring(s.category), num(s.hydRpm), num(getProfile(s).brakeMult, 1),
             #fuels > 0 and table.concat(fuels, ",") or "?"))
         local ptoRpmXml = self.spec_powerConsumer ~= nil and self.spec_powerConsumer.ptoRpm or nil
-        print(string.format("[FlowDrive] etape 4 : regime en marche=%s debit auto=%s PdF propre=%s rapports AV %s-%s limite travail=%s",
+        print(FlowDrive.logPrefix() .. string.format(" etape 4 : regime en marche=%s debit auto=%s PdF propre=%s rapports AV %s-%s limite travail=%s",
             num(s.turnOnRpm), tostring(s.flowEnabled), num(ptoRpmXml), num(motor ~= nil and motor.minForwardGearRatio or nil, 1),
             num(motor ~= nil and motor.maxForwardGearRatio or nil, 0), num(self.speedLimit, 1)))
-        print(string.format("[FlowDrive] etape 5 : types avec prechauffage=%s sans=%s", tostring(FlowDrive.preheatTypes),
+        print(FlowDrive.logPrefix() .. string.format(" etape 5 : types avec prechauffage=%s sans=%s", tostring(FlowDrive.preheatTypes),
             tostring(FlowDrive.preheatMissing)))
-        print(string.format("[FlowDrive] etape 5 : ADS=%s moteur %s degres (%s) air %s degres froid=%s seuil %s plafond %s prechauffage fait=%s auto-demarrage jeu=%s",
+        print(FlowDrive.logPrefix() .. string.format(" etape 5 : ADS=%s moteur %s degres (%s) air %s degres froid=%s seuil %s plafond %s prechauffage fait=%s auto-demarrage jeu=%s",
             tostring(self.spec_AdvancedDamageSystem ~= nil), num(s.engineTemp, 1), s.engineTempSource, num(s.ambientTemp, 1),
             tostring(s.cold), num(s.coldLimit), num(s.coldCap), tostring(s.preheatDone),
             tostring(g_currentMission ~= nil and g_currentMission.missionInfo ~= nil and g_currentMission.missionInfo.automaticMotorStartEnabled)))
@@ -1536,7 +1908,8 @@ function FlowDriveSpec.actionPtoEco(self, actionName, inputValue, callbackState,
         return
     end
     s.ptoEco = not s.ptoEco
-    notify(FlowDrive.t(s.ptoEco and "fd_msg_ptoEcoOn" or "fd_msg_ptoEcoOff"))
+    FlowDriveSpec.sendSettings(self)
+    notify(self, FlowDrive.t(s.ptoEco and "fd_msg_ptoEcoOn" or "fd_msg_ptoEcoOff"))
 end
 
 function FlowDriveSpec.actionMemory(self, actionName, inputValue, callbackState, isAnalog)
@@ -1545,10 +1918,11 @@ function FlowDriveSpec.actionMemory(self, actionName, inputValue, callbackState,
         return
     end
     s.memory = (s.memory + 1) % 3
+    FlowDriveSpec.sendSettings(self)
     if s.memory == 0 then
-        notify(FlowDrive.t("fd_msg_memOff"))
+        notify(self, FlowDrive.t("fd_msg_memOff"))
     else
-        notify(FlowDrive.tf("fd_msg_memOn", s.memory, math.floor((s.memRpm[s.memory] or 0) + 0.5)))
+        notify(self, FlowDrive.tf("fd_msg_memOn", s.memory, math.floor((s.memRpm[s.memory] or 0) + 0.5)))
     end
 end
 
@@ -1558,13 +1932,14 @@ local function adjustMemory(vehicle, delta)
         return
     end
     if s.memory == 0 or s.memRpm[s.memory] == nil then
-        notify(FlowDrive.t("fd_msg_memNeed"))
+        notify(vehicle, FlowDrive.t("fd_msg_memNeed"))
         return
     end
     local minRpm = (s.idleRpm or 800) + 100
     local maxRpm = s.ratedRpm or 2200
     s.memRpm[s.memory] = clamp(s.memRpm[s.memory] + delta, minRpm, maxRpm)
-    notify(FlowDrive.tf("fd_msg_memSet", s.memory, math.floor((s.memRpm[s.memory] or 0) + 0.5)))
+    FlowDriveSpec.sendSettings(vehicle)
+    notify(vehicle, FlowDrive.tf("fd_msg_memSet", s.memory, math.floor((s.memRpm[s.memory] or 0) + 0.5)))
 end
 
 function FlowDriveSpec.actionRpmUp(self, actionName, inputValue, callbackState, isAnalog)
@@ -1582,7 +1957,8 @@ function FlowDriveSpec.actionBoost(self, actionName, inputValue, callbackState, 
     end
     s.boostEnabled = not s.boostEnabled
     scan(self, s)
-    notify(s.boostEnabled and FlowDrive.tf("fd_msg_boostOn", s.boostPct or FlowDrive.BOOST_DEFAULT_PCT,
+    FlowDriveSpec.sendSettings(self)
+    notify(self, s.boostEnabled and FlowDrive.tf("fd_msg_boostOn", s.boostPct or FlowDrive.BOOST_DEFAULT_PCT,
         FlowDrive.t(s.boostIncluded and "fd_boost_included" or "fd_boost_added"))
         or FlowDrive.t("fd_msg_boostOff"))
 end

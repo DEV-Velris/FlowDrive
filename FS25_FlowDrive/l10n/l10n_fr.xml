@@ -47,6 +47,7 @@
         <text name="fd_opt_preheat_tt" text="Sous 5 °C, préchauffage de 2 à 15 s avant de démarrer."/>
         <text name="fd_opt_cold" text="Protection moteur froid"/>
         <text name="fd_opt_cold_tt" text="Moteur froid : régime limité à 72 % et rampe 2 maximum (seuil d'ADS s'il est installé)."/>
+        <text name="fd_opt_serverRule_tt" text="Multijoueur : ce réglage suit celui de l'hôte de la partie."/>
         <text name="fd_opt_hud" text="Affichage FlowDrive"/>
         <text name="fd_opt_hud_tt" text="Petit affichage : rampe, gamme et état de la transmission."/>
         <text name="fd_opt_hudPos" text="Position de l'affichage"/>
