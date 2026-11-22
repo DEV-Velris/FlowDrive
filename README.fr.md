@@ -58,6 +58,7 @@ Le boost est **désactivé par défaut**. Le menu affiche la puissance de la mac
 | `FS25_FlowDrive/` | le mod, tel qu'il est zippé |
 | `docs/` | site (`index.html`, publié par GitHub Pages), fonctionnement détaillé, guide du boost (en français) |
 | `tools/` | `build.ps1` (fabrique le zip), `luacheck_blocks.js` (vérifie la structure des fichiers Lua) |
+| `.github/` | fiches de signalement de bug (français et anglais) |
 
 ## Fabriquer le zip
 
@@ -66,6 +67,14 @@ powershell -ExecutionPolicy Bypass -File tools\build.ps1
 ```
 
 Le script vérifie les fichiers Lua (si Node.js est installé). Il crée ensuite `dist/FS25_FlowDrive.zip` et une copie numérotée `dist/FS25_FlowDrive_<version>.zip`. Pour installer, copier `FS25_FlowDrive.zip` dans le dossier `mods`, **jeu fermé**. Le nom du zip ne doit pas changer : le jeu reconnaît un mod à ce nom.
+
+## Signaler un problème
+
+Ouvrir une issue avec la fiche **[Signaler un problème](https://github.com/DEV-Velris/FlowDrive/issues/new/choose)** (français ou anglais). Joindre le fichier `log.txt` de `Documents\My Games\FarmingSimulator2025\`, copié **avant de relancer le jeu** (il est effacé à chaque démarrage). En multijoueur, joindre le log de l'hôte et celui du joueur qui a vu le problème.
+
+## Licence
+
+FlowDrive est un logiciel libre, sous [licence publique générale GNU v3.0](LICENSE) (GPL-3.0). On peut l'utiliser, le modifier et le partager, à condition de citer l'auteur, de garder la même licence et de publier le code source de ses modifications.
 
 ## Auteur
 

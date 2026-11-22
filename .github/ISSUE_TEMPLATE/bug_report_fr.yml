@@ -1,0 +1,90 @@
+name: Signaler un problème (FR)
+description: Un bug, un comportement étrange ou une erreur dans le log.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de signaler le problème. Plus la fiche est complète, plus la correction est rapide.
+        **Le fichier `log.txt` est indispensable** : sans lui, on ne peut presque rien trouver.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version de FlowDrive
+      description: Visible dans le gestionnaire de mods, ou dans le log à la ligne « [FlowDrive] version … chargee ».
+      placeholder: "1.0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode de jeu
+      options:
+        - Solo
+        - Multijoueur, je suis l'hôte (la partie est lancée depuis mon jeu)
+        - Multijoueur, je suis connecté à la partie d'un autre joueur
+        - Multijoueur, serveur dédié
+    validations:
+      required: true
+
+  - type: input
+    id: map
+    attributes:
+      label: Carte
+      placeholder: "Riverbend Springs"
+
+  - type: textarea
+    id: vehicle
+    attributes:
+      label: Machine concernée
+      description: Marque, modèle, et le nom du mod si ce n'est pas une machine du jeu de base. Si toutes les machines sont touchées, indique-le.
+      placeholder: "New Holland T7.315 (jeu de base)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: Ce qui se passe
+      description: Ce que tu as vu, et ce que tu attendais à la place.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Comment le reproduire
+      placeholder: |
+        1. Monter dans la machine
+        2. Atteler la presse
+        3. Engager la prise de force
+        4. …
+
+  - type: textarea
+    id: mods
+    attributes:
+      label: Autres mods actifs
+      description: Surtout ceux qui touchent au moteur, à la boîte ou à l'affichage (Advanced Damage System, Courseplay, DashboardLive…). La liste complète est aussi au début du log.
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Fichier log.txt
+      description: |
+        Glisse ici le fichier `log.txt`. Il est dans `Documents\My Games\FarmingSimulator2025\`.
+        **Ne relance pas le jeu avant de le copier** : il est effacé à chaque démarrage.
+        En multijoueur, joins si possible le log de l'hôte (ou du serveur dédié) **et** celui du joueur qui a vu le problème.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Vérifications
+      options:
+        - label: CVT Addon n'est pas actif dans cette partie (les deux mods modifient la même chose).
+          required: true
+        - label: J'utilise la dernière version de FlowDrive.

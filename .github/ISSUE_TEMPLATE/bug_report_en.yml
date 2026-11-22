@@ -1,0 +1,90 @@
+name: Report a problem (EN)
+description: A bug, a strange behaviour or an error in the log.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting the problem. The more complete the report, the faster the fix.
+        **The `log.txt` file is essential**: without it, there is almost nothing to go on.
+
+  - type: input
+    id: version
+    attributes:
+      label: FlowDrive version
+      description: Shown in the mod manager, or in the log on the "[FlowDrive] version … chargee" line.
+      placeholder: "1.0.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - Single player
+        - Multiplayer, I am the host (the game runs from my computer)
+        - Multiplayer, I joined another player's game
+        - Multiplayer, dedicated server
+    validations:
+      required: true
+
+  - type: input
+    id: map
+    attributes:
+      label: Map
+      placeholder: "Riverbend Springs"
+
+  - type: textarea
+    id: vehicle
+    attributes:
+      label: Vehicle
+      description: Brand, model, and the mod name if it is not a base game vehicle. If every vehicle is affected, say so.
+      placeholder: "New Holland T7.315 (base game)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      placeholder: |
+        1. Get into the vehicle
+        2. Attach the baler
+        3. Turn the PTO on
+        4. …
+
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other active mods
+      description: Especially the ones that change the engine, the transmission or the display (Advanced Damage System, Courseplay, DashboardLive…). The full list is also at the start of the log.
+
+  - type: textarea
+    id: log
+    attributes:
+      label: log.txt file
+      description: |
+        Drop the `log.txt` file here. It is in `Documents\My Games\FarmingSimulator2025\`.
+        **Do not restart the game before copying it**: it is erased at every start.
+        In multiplayer, attach if possible the log of the host (or of the dedicated server) **and** the log of the player who saw the problem.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: CVT Addon is not active in this game (both mods change the same things).
+          required: true
+        - label: I use the latest FlowDrive version.
