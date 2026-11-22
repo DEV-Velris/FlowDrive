@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="114">
     <author>Velris</author>
-    <version>1.0.1.0</version>
+    <version>1.0.2.0</version>
     <title>
         <en>FlowDrive</en>
         <fr>FlowDrive</fr>
@@ -56,7 +56,7 @@ Ne pas utiliser avec CVT Addon. Solo.]]></fr>
         <action name="FLOWDRIVE_COLDTEST"/>
     </actions>
 
-    <!-- 1.0.0 : seul le menu a une touche par defaut. Panneau de mesure et essai froid restent assignables. -->
+    <!-- 1.0.0: only the menu has a default key. Measurement panel and cold test can be bound in the controls menu. -->
     <inputBinding>
         <actionBinding action="FLOWDRIVE_MENU">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_lshift KEY_lalt KEY_t"/>

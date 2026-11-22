@@ -1,38 +1,45 @@
-# Historique des versions
+# Changelog
+
+**English** · [Français](CHANGELOG.fr.md)
+
+## 1.0.2.0
+- The menu shows the vehicle's power in the game on the "Game power (… hp)" row, to compare it with the real spec sheet and choose the boost.
+- Boost tooltips updated (real boosts: 5 to 20 %).
+- Code comments in English. No change in behaviour.
 
 ## 1.0.1.0
-- Préchauffage : il ne part plus en montant dans une machine froide. Il part à l'appui sur la touche de démarrage (Entrée), puis le moteur démarre. Il part en montant seulement si le démarrage automatique du jeu est activé.
-- Correction : en 1.0.0, le moteur pouvait démarrer tout seul après un préchauffage, sans appui sur la touche.
+- Preheating no longer starts when getting into a cold vehicle. It starts when the start key (Enter) is pressed, then the engine starts. It starts on entering only when the game's automatic motor start option is on.
+- Fix: in 1.0.0, the engine could start by itself after preheating, without the key being pressed.
 
 ## 1.0.0.0
-- Titre et description définitifs.
-- Seul le menu garde une touche par défaut (`Maj + Alt + T`). Le panneau de mesure et l'essai froid peuvent recevoir une touche dans les commandes.
+- Final title and description.
+- Only the menu keeps a default key (`Left Shift + Left Alt + T`). The measurement panel and the cold test can be bound in the controls menu.
 
 ## 0.8.0
-- Boost désactivé par défaut sur toutes les machines.
-- Pourcentage de boost saisi au clavier (1 à 30, 0 = désactivé).
-- Nouveau réglage « Puissance du jeu » : inclus ou en plus.
-- Rampe **Auto** par défaut : la rampe est choisie selon le travail, la charge et le type de machine.
+- Boost off by default on every vehicle.
+- Boost percentage typed in (1 to 30, 0 = off).
+- New "Game power" setting: boost included or added.
+- **Auto** ramp by default: the ramp follows the work, the load and the vehicle type.
 
 ## 0.7.0
-- Compatibilité vérifiée avec ADS, Courseplay, EngineBrakeforceCompensation et DashboardLive.
-- Changement de gamme refusé au-dessus de 10 km/h.
+- Compatibility checked with ADS, Courseplay, EngineBrakeforceCompensation and DashboardLive.
+- Range change refused above 10 km/h.
 
 ## 0.6.x
-- Menu de réglages, affichage à l'écran, écrans DashboardLive, textes FR et EN.
-- Mesure de consommation corrigée.
+- Settings menu, on-screen display, DashboardLive screens, French and English texts.
+- Fuel consumption measurement fixed.
 
 ## 0.5.0
-- Préchauffage, protection moteur froid, température d'ADS, mode essai froid.
+- Preheating, cold engine protection, ADS temperature, cold test mode.
 
 ## 0.4.x
-- Moissonneuses : gammes récolte et route, débit auto.
+- Harvesters: harvest and road ranges, automatic crop flow.
 
 ## 0.3.x
-- Chargeuses, télescopiques et automotrices (profil HST), régime hydraulique, approche lente.
+- Loaders, telehandlers and self-propelled machines (HST profile), hydraulic engine speed, inching.
 
 ## 0.2.x
-- PdF éco, régimes mémorisés, boost.
+- Eco PTO, engine speed memories, boost.
 
 ## 0.1.x
-- CVT de tracteur : rampes, régime éco, limite de charge, gamme champ, frein moteur.
+- Tractor CVT: ramps, eco engine speed, load limit, field range, engine braking.

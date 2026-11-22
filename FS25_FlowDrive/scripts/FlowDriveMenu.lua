@@ -1,7 +1,7 @@
--- FlowDrive 0.6.0 : fenetre de reglages (Maj + Alt + T). 0.8.0 : rampe auto, boost saisi en %.
--- Meme methode qu'ADS : classe derivee de MessageDialog, chargee au premier affichage (g_gui:loadGui),
--- mise en page XML avec les profils FS25 deja utilises par CVT Addon.
--- Les choix ne sont appliques qu'avec OK ; Retour (ou Echap) ne change rien.
+-- FlowDrive settings window (Left Shift + Left Alt + T). 0.8.0: auto ramp, boost entered in %.
+-- Same method as ADS: class derived from MessageDialog, loaded on first display (g_gui:loadGui),
+-- XML layout with the FS25 profiles already used by CVT Addon.
+-- Choices are only applied with OK; Back (or Escape) changes nothing.
 
 FlowDriveMenu = FlowDriveMenu or {}
 local FlowDriveMenu_mt = Class(FlowDriveMenu, MessageDialog)
@@ -61,7 +61,7 @@ function FlowDriveMenu:onClose()
     FlowDriveMenu:superClass().onClose(self)
 end
 
--- Liste des regimes memorisables : ralenti + 100 au nominal, par pas de FlowDrive.MEMORY_STEP
+-- List of engine speeds that can be memorised: idle + 100 up to rated, in steps of FlowDrive.MEMORY_STEP
 local function buildRpmList(s)
     local values, texts = {}, {}
     local idle = s.idleRpm or 800
@@ -98,11 +98,11 @@ function FlowDriveMenu:updateContent()
     self.guiTitle:setText(FlowDrive.t("fd_menu_title") .. " " .. FlowDrive.t("fd_menu_for") .. " " .. name)
     self.guiVersion:setText("FlowDrive " .. tostring(FlowDrive.VERSION))
 
-    -- Ce vehicule
+    -- This vehicle
     self.optEnabled:setTexts(yesNo())
     self.optEnabled:setState(boolState(s.enabled))
 
-    -- 0.8.0 : premier choix = Auto
+    -- 0.8.0: first choice = Auto
     local rampTexts = {FlowDrive.t("fd_ramp_auto")}
     for index, ramp in ipairs(FlowDrive.RAMPS) do
         rampTexts[index + 1] = FlowDrive.tf("fd_ramp_value", index, string.format("%.1f", ramp.accel))
@@ -130,17 +130,25 @@ function FlowDriveMenu:updateContent()
     self.optMem2:setTexts(texts)
     self.optMem2:setState(nearestIndex(values, s.memRpm[2]))
 
-    -- 0.8.0 : boost "Desactive / X %", X saisi avec le bouton du bas ; mode inclus / en plus
+    -- 0.8.0: boost "Off / X %", X entered with the bottom button; included / added mode
     self.boostPct = s.boostPct or FlowDrive.BOOST_DEFAULT_PCT
     self:updateBoostTexts(s.boostEnabled)
 
+    -- 1.0.2: the row title shows the game power, to compare with the real spec sheet
+    if self.titleBoostMode ~= nil then
+        if s.gameHp ~= nil then
+            self.titleBoostMode:setText(FlowDrive.tf("fd_opt_boostModeHp", s.gameHp))
+        else
+            self.titleBoostMode:setText(FlowDrive.t("fd_opt_boostMode"))
+        end
+    end
     self.optBoostMode:setTexts({FlowDrive.t("fd_boost_included"), FlowDrive.t("fd_boost_added")})
     self.optBoostMode:setState(s.boostIncluded ~= false and 1 or 2)
 
     self.optFlow:setTexts(yesNo())
     self.optFlow:setState(boolState(s.flowEnabled))
 
-    -- Reglages du vehicule grises s'il n'est pas gere ; debit auto seulement sur une moissonneuse
+    -- Vehicle settings greyed out when it is not handled; crop flow only on a harvester
     local eligible = s.eligible == true
     for _, option in ipairs({self.optEnabled, self.optRamp, self.optRange, self.optPtoEco, self.optMemory,
         self.optMem1, self.optMem2, self.optBoost, self.optBoostMode}) do
@@ -156,7 +164,7 @@ function FlowDriveMenu:updateContent()
         self.ttEnabled:setText(FlowDrive.t("fd_opt_enabled_tt"))
     end
 
-    -- Reglages generaux
+    -- General settings
     self.optHydraulic:setTexts(yesNo())
     self.optHydraulic:setState(boolState(settings.hydraulic))
     self.optPreheat:setTexts(yesNo())
@@ -171,13 +179,13 @@ function FlowDriveMenu:updateContent()
     self.optDbl:setState(boolState(settings.dbl))
 end
 
--- 0.8.0 : ligne boost : 1 = desactive, 2 = pourcentage en cours
+-- 0.8.0: boost row: 1 = off, 2 = current percentage
 function FlowDriveMenu:updateBoostTexts(enabled)
     self.optBoost:setTexts({FlowDrive.t("fd_off"), FlowDrive.tf("fd_boost_pct", self.boostPct)})
     self.optBoost:setState(enabled and 2 or 1)
 end
 
--- 0.8.0 : saisie libre du pourcentage avec la boite de saisie du jeu (meme appel que FS25_ShopSearch)
+-- 0.8.0: free entry of the percentage with the game's text input dialog (same call as FS25_ShopSearch)
 function FlowDriveMenu:onClickBoostInput()
     if TextInputDialog == nil or TextInputDialog.createFromExistingGui == nil then
         print("[FlowDrive] ATTENTION : boite de saisie du jeu introuvable")
@@ -258,11 +266,11 @@ function FlowDriveMenu:onClickApply()
     settings.dbl = stateBool(self.optDbl)
     pcall(FlowDrive.saveSettings)
 
-    print(string.format("[FlowDrive] menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s debit=%s | hydraulique=%s prechauffage=%s froid=%s affichage=%s position=%s dbl=%s",
+    print(string.format("[FlowDrive] menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s puissance jeu=%s ch debit=%s | hydraulique=%s prechauffage=%s froid=%s affichage=%s position=%s dbl=%s",
         tostring(s ~= nil and s.enabled), tostring(s ~= nil and s.ramp), tostring(s ~= nil and s.range),
         tostring(s ~= nil and s.ptoEco), tostring(s ~= nil and s.memory), tostring(s ~= nil and s.memRpm[1]),
         tostring(s ~= nil and s.memRpm[2]), tostring(s ~= nil and s.boostEnabled), tostring(s ~= nil and s.boostPct),
-        tostring(s ~= nil and s.boostIncluded), tostring(s ~= nil and s.flowEnabled),
+        tostring(s ~= nil and s.boostIncluded), tostring(s ~= nil and s.gameHp), tostring(s ~= nil and s.flowEnabled),
         tostring(settings.hydraulic), tostring(settings.preheat), tostring(settings.coldProtect), tostring(settings.hud),
         tostring(settings.hudPos), tostring(settings.dbl)))
     if g_currentMission ~= nil and g_currentMission.hud ~= nil and g_currentMission.hud.addSideNotification ~= nil then

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
-<!-- FlowDrive 0.6.0 : fenetre de reglages. Mise en page reprise des profils FS25 deja utilises par CVT Addon. -->
+<!-- FlowDrive settings window. Layout based on the FS25 profiles already used by CVT Addon. -->
 <GUI onOpen="onOpen" onClose="onClose">
 
     <GuiElement profile="newLayer" />
@@ -14,13 +14,13 @@
             <Bitmap profile="fs25_startClipper" name="topClipper" />
             <Bitmap profile="fs25_stopClipper" name="bottomClipper" />
 
-            <!-- EN-TETE -->
+            <!-- HEADER -->
             <GuiElement profile="fs25_menuHeaderPanel">
                 <Text typeClass="TEXT" profile="dialogHeaderText" textAutoSize="true" id="guiTitle" position="0px -20px" />
                 <Text typeClass="TEXT" profile="versionText" textAutoSize="true" id="guiVersion" position="1300px -30px" />
             </GuiElement>
 
-            <!-- REGLAGES -->
+            <!-- SETTINGS -->
             <ScrollingLayout profile="fs25_settingsLayout" id="scrollingLayout"
                 topClipperElementName="topClipper" bottomClipperElementName="bottomClipper"
                 position="10px -50px" width="1400px" height="680px">
@@ -84,7 +84,7 @@
                 </GuiElement>
 
                 <GuiElement profile="fs25_multiTextOptionContainer">
-                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_boostMode"/>
+                    <Text profile="multiTextOptionSettingsTitle" id="titleBoostMode" text="$l10n_fd_opt_boostMode"/>
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="optBoostMode">
                         <Text profile="fs25_multiTextOptionTooltip" name="ignore" position="700px 0px" text="$l10n_fd_opt_boostMode_tt"/>
                     </MultiTextOption>
@@ -146,7 +146,7 @@
 
             <Slider profile="fs25_sliderDocked" dataElementId="scrollingLayout" position="1464px 0px" height="818px" />
 
-            <!-- BOUTONS -->
+            <!-- BUTTONS -->
             <BoxLayout profile="fs25_dialogButtonBox" position="0px -40px">
                 <Button profile="buttonBack" id="backButton" text="$l10n_button_back" onClick="onClickBack"/>
                 <Bitmap profile="fs25_dialogButtonBoxSeparator"/>

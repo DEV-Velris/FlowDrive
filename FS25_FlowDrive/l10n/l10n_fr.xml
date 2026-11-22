@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <l10n>
     <texts>
-        <!-- Touches -->
+        <!-- Keys -->
         <text name="input_FLOWDRIVE_MENU" text="FlowDrive : réglages"/>
         <text name="input_FLOWDRIVE_TOGGLE" text="FlowDrive : marche / arrêt"/>
         <text name="input_FLOWDRIVE_RAMP" text="FlowDrive : rampe suivante"/>
@@ -36,8 +36,9 @@
         <text name="fd_opt_mem_tt" text="Valeur gardée dans la sauvegarde."/>
         <text name="fd_opt_boost" text="Boost"/>
         <text name="fd_opt_boostMode" text="Puissance du jeu"/>
-        <text name="fd_opt_boostMode_tt" text="Inclus : la puissance du jeu est déjà celle avec boost (John Deere, Case IH, Valtra, Fendt 728…), FlowDrive la baisse hors boost. En plus : le boost s’ajoute (Massey Ferguson…)."/>
-        <text name="fd_opt_boost_tt" text="Au-dessus de 16 km/h sans outil baissé, et avec la prise de force. Bouton « Boost : saisir % » pour changer le chiffre (vrais tracteurs : 5 à 10 %)."/>
+        <text name="fd_opt_boostModeHp" text="Puissance du jeu (%d ch)"/>
+        <text name="fd_opt_boostMode_tt" text="Compare cette puissance à la vraie fiche. Inclus : c'est déjà celle avec boost, FlowDrive la baisse hors boost. En plus : c'est celle sans boost, le boost s'ajoute."/>
+        <text name="fd_opt_boost_tt" text="Au-dessus de 16 km/h sans outil baissé, et avec la prise de force. Bouton « Boost : saisir % » pour changer le chiffre (vrais tracteurs : 5 à 20 %)."/>
         <text name="fd_opt_flow" text="Débit auto (moissonneuses)"/>
         <text name="fd_opt_flow_tt" text="La vitesse baisse si la charge moteur dépasse 90 %, puis remonte sous 75 % jusqu'à la vitesse du régulateur."/>
         <text name="fd_opt_hydraulic" text="Régime hydraulique automatique"/>
@@ -73,7 +74,7 @@
         <text name="fd_boost_prompt" text="Boost en %% (0 à %d, 0 = désactivé)"/>
         <text name="fd_button_boost" text="Boost : saisir %"/>
 
-        <!-- Raisons -->
+        <!-- Reasons -->
         <text name="fd_reason_noMotor" text="pas de moteur"/>
         <text name="fd_reason_noCvt" text="boîte à rapports"/>
         <text name="fd_reason_electric" text="moteur électrique, laissé au jeu"/>
@@ -111,7 +112,7 @@
         <text name="fd_msg_coldTestOff" text="FlowDrive : essai froid terminé (températures réelles)"/>
         <text name="fd_msg_saved" text="FlowDrive : réglages enregistrés"/>
 
-        <!-- Affichage -->
+        <!-- Display -->
         <text name="fd_hud_line1" text="FlowDrive  ·  rampe %s  ·  %s"/>
         <text name="fd_hud_off" text="FlowDrive coupé"/>
         <text name="fd_hud_preheat" text="Préchauffage %d s"/>

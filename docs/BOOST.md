@@ -27,7 +27,7 @@ FlowDrive agit sur le **couple** : il multiplie la courbe de couple du moteur.
 ## 3. Règle de décision
 
 Il faut trois informations :
-1. **la puissance de la machine dans le jeu**, en ch, affichée dans le magasin ;
+1. **la puissance de la machine dans le jeu**, en ch : affichée dans le menu FlowDrive (ligne « Puissance du jeu (… ch) », depuis la 1.0.2) et dans le magasin ;
 2. **la puissance réelle de base** (nominale ou maximale sans boost), d'après la fiche du constructeur ;
 3. **la puissance réelle avec boost**, si la machine en a un, et **ses conditions** (PdF, transport, vitesse).
 

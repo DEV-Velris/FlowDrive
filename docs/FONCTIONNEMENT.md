@@ -1,4 +1,4 @@
-# FlowDrive : fonctionnement détaillé (1.0.1)
+# FlowDrive : fonctionnement détaillé (1.0.2)
 
 ## Principe
 

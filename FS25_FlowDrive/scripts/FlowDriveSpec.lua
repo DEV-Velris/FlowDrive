@@ -1,16 +1,16 @@
--- FlowDrive 0.1.0 - etape 1 : CVT moderne, mode pedale
--- Specialisation : etat par vehicule, sauvegarde, touches, loi de conduite, panneau de reglage.
--- Les consignes calculees ici sont lues par les accroches de FlowDriveMain.lua.
+-- FlowDrive specialization
+-- Per-vehicle state, savegame, keys, driving law, measurement panel.
+-- The targets computed here are read by the hooks in FlowDriveMain.lua.
 
 FlowDriveSpec = {}
 
-local SCAN_INTERVAL = 500      -- ms : verifications lentes (outils, CVT Addon, prise de force)
-local LOG_INTERVAL = 1000      -- ms : journal du mode reglage
-local K_DEFAULT = 0.38         -- km/h par (tr/min / rapport), mesure sur le Q305 a l'etape 0
+local SCAN_INTERVAL = 500      -- ms: slow checks (implements, CVT Addon, PTO)
+local LOG_INTERVAL = 1000      -- ms: measurement panel log interval
+local K_DEFAULT = 0.38         -- km/h per (rpm / ratio), measured on the Q305 at step 0
 local KMH_PER_RADIUS = 3.6 * math.pi / 30
 
 ------------------------------------------------------------------------------------------
--- Outils
+-- Helpers
 ------------------------------------------------------------------------------------------
 
 local function clamp(value, minValue, maxValue)
@@ -50,7 +50,7 @@ local function notify(text)
 end
 
 ------------------------------------------------------------------------------------------
--- Enregistrement
+-- Registration
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.prerequisitesPresent(specializations)
@@ -84,7 +84,7 @@ function FlowDriveSpec.registerEventListeners(vehicleType)
 end
 
 ------------------------------------------------------------------------------------------
--- Chargement et sauvegarde
+-- Loading and saving
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec:onLoad(savegame)
@@ -94,8 +94,8 @@ function FlowDriveSpec:onLoad(savegame)
     s.eligible = false
     s.reason = ""
     s.active = false
-    s.ramp = FlowDrive.RAMP_AUTO       -- 0.8.0 : rampe auto par defaut
-    s.rampAuto = nil                   -- rampe choisie par le mode auto
+    s.ramp = FlowDrive.RAMP_AUTO       -- 0.8.0: auto ramp by default
+    s.rampAuto = nil                   -- ramp chosen by the auto mode
     s.rampAutoCandidate = nil
     s.rampAutoTimer = 0
     s.range = FlowDrive.RANGE_AUTO
@@ -121,18 +121,18 @@ function FlowDriveSpec:onLoad(savegame)
     s.overrunMinRpm = nil
     s.requiredMinRpm = nil
     s.displayLines = {}
-    -- 0.2.0 : prise de force eco, regime memorise, boost
+    -- 0.2.0: eco PTO, engine speed memory, boost
     s.ptoEco = false
-    s.memory = 0               -- 0 : aucun, 1 ou 2 : memoire active (non sauvegarde, comme un vrai tracteur)
+    s.memory = 0               -- 0: none, 1 or 2: active memory (not saved, like a real tractor)
     s.memRpm = {nil, nil}
     s.fixedRpm = nil
-    s.boostEnabled = false     -- 0.8.0 : coupe par defaut sur toutes les marques
+    s.boostEnabled = false     -- 0.8.0: off by default for every brand
     s.boostPct = FlowDrive.BOOST_DEFAULT_PCT
-    s.boostIncluded = true     -- puissance du jeu deja boostee (cas le plus courant dans le jeu de base)
-    s.torqueFactor = 1         -- multiplicateur de couple applique (FlowDriveMain.hookTorqueCurveValue)
+    s.boostIncluded = true     -- game power already includes the boost (most common case in the base game)
+    s.torqueFactor = 1         -- torque multiplier applied (FlowDriveMain.hookTorqueCurveValue)
     s.boostApplied = false
     s.boostCooldown = 0
-    -- 0.3.0 : profil, regime hydraulique, approche lente, consommation
+    -- 0.3.0: profile, hydraulic engine speed, inching, fuel consumption
     s.profile = "cvt"
     s.category = nil
     s.hydCommand = 0
@@ -146,13 +146,13 @@ function FlowDriveSpec:onLoad(savegame)
     s.inchRpm = nil
     s.inchMinRatio = nil
     s.fuelSmooth = nil
-    -- 0.4.0 : regulation de debit des moissonneuses
+    -- 0.4.0: harvester crop flow control
     s.flowEnabled = true
     s.flowLoad = 0
     s.flowSpeed = nil
     s.flowMinRatio = nil
     s.turnOnRpm = nil
-    -- 0.5.0 : prechauffage, moteur froid, essai froid, consommation mesuree
+    -- 0.5.0: preheating, cold engine, cold test, measured fuel consumption
     s.preheatTimer = 0
     s.preheatTotal = 0
     s.preheatDone = false
@@ -172,11 +172,11 @@ function FlowDriveSpec:onLoad(savegame)
 end
 
 ------------------------------------------------------------------------------------------
--- 0.5.0 : temperatures, prechauffage (le jeu refuse le demarrage tant qu'il dure)
+-- 0.5.0: temperatures, preheating (the game refuses to start while it runs)
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.registerOverwrittenFunctions(vehicleType)
-    -- uniquement si le type de vehicule les a (Motorized), pour ne jamais casser un type inconnu
+    -- only if the vehicle type has them (Motorized), so an unknown type is never broken
     if vehicleType.functions ~= nil and vehicleType.functions.getCanMotorRun ~= nil then
         SpecializationUtil.registerOverwrittenFunction(vehicleType, "getCanMotorRun", FlowDriveSpec.getCanMotorRun)
         FlowDrive.preheatTypes = (FlowDrive.preheatTypes or 0) + 1
@@ -188,7 +188,7 @@ function FlowDriveSpec.registerOverwrittenFunctions(vehicleType)
     end
 end
 
--- Temperature de l'air (degres C) : celle de la meteo du jeu, ou celle du mode essai froid
+-- Air temperature (degrees C): from the game weather, or from the cold test mode
 function FlowDriveSpec.getAmbientTemperature(s)
     if s.coldTest then
         return FlowDrive.COLDTEST_AMBIENT
@@ -204,7 +204,7 @@ function FlowDriveSpec.getAmbientTemperature(s)
     return nil
 end
 
--- Temperature moteur (degres C) : ADS si present, sinon celle du jeu ; le mode essai froid la simule
+-- Engine temperature (degrees C): from ADS when present, otherwise from the game; the cold test mode simulates it
 function FlowDriveSpec.getEngineTemperature(vehicle, s)
     if s.coldTest and s.coldTestTemp ~= nil then
         s.engineTempSource = "essai"
@@ -234,7 +234,7 @@ local function isPlayerControlled(vehicle)
     return vehicle.getIsEntered ~= nil and vehicle:getIsEntered() == true
 end
 
--- Lance le prechauffage si besoin. Rend true tant qu'il dure.
+-- Starts preheating when needed. Returns true while it runs.
 function FlowDriveSpec.updatePreheatNeed(vehicle, s)
     if s.preheatTimer > 0 then
         return true
@@ -262,10 +262,10 @@ function FlowDriveSpec.updatePreheatNeed(vehicle, s)
 end
 
 ------------------------------------------------------------------------------------------
--- 0.6.0 : ecrans DashboardLive
--- DashboardLive lit vehicle.spec_CVTaddon.forDBL_<nom>. Si CVT Addon n'est pas la, FlowDrive cree une
--- petite table a ce nom, SANS CVTcfgExists ni CVTconfig : ADS (stable et beta) et FlowDrive ne la
--- prennent donc pas pour CVT Addon. Une vraie table CVT Addon n'est jamais touchee.
+-- 0.6.0: DashboardLive screens
+-- DashboardLive reads vehicle.spec_CVTaddon.forDBL_<name>. When CVT Addon is absent, FlowDrive creates a
+-- small table with that name, WITHOUT CVTcfgExists or CVTconfig: ADS (stable and beta) and FlowDrive therefore
+-- do not mistake it for CVT Addon. A real CVT Addon table is never touched.
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.updateDbl(vehicle, s)
@@ -289,7 +289,7 @@ function FlowDriveSpec.updateDbl(vehicle, s)
     end
     local motor = vehicle.spec_motorized ~= nil and vehicle.spec_motorized.motor or nil
     t.forDBL_accramp = s.rampEff or s.ramp
-    -- CVT Addon : 1 = gamme lente, 2 = gamme route
+    -- CVT Addon: 1 = slow range, 2 = road range
     t.forDBL_drivinglevel = s.rangeActive == FlowDrive.RANGE_FIELD and 1 or 2
     t.forDBL_motorcoldlamp = s.cold and 1 or 0
     t.forDBL_preglowing = s.preheatTimer > 0 and 1 or 0
@@ -312,7 +312,7 @@ function FlowDriveSpec.updateDbl(vehicle, s)
 end
 
 ------------------------------------------------------------------------------------------
--- 0.6.0 : affichage (rampe, gamme, etat)
+-- 0.6.0: on-screen display (ramp, range, state)
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.getHudLines(vehicle, s)
@@ -367,7 +367,7 @@ function FlowDriveSpec.drawHud(vehicle, s)
     setTextBold(false)
     for index, line in ipairs(lines) do
         local lineY = y - (index - 1) * (size * 1.35)
-        -- ombre pour rester lisible sur fond clair
+        -- shadow to stay readable on a light background
         setTextColor(0, 0, 0, 0.75)
         renderText(x + 0.0008, lineY - 0.0012, size, line)
         if index == 1 then
@@ -386,9 +386,9 @@ local function isAutoMotorStart()
         and g_currentMission.missionInfo.automaticMotorStartEnabled == true
 end
 
--- 1.0.1 : le prechauffage ne part plus en montant dans la machine. Il part a l'appui sur la touche de
--- demarrage (Entree), intercepte dans FlowDriveMain (Motorized.actionEventToggleMotorState), puis le
--- moteur demarre a la fin. Seul le demarrage automatique du jeu (option) le lance en montant.
+-- 1.0.1: preheating no longer starts when entering the vehicle. It starts when the start key
+-- (Enter) is pressed, intercepted in FlowDriveMain (Motorized.actionEventToggleMotorState), then the
+-- engine starts at the end. Only the game's automatic motor start option starts it on entering.
 function FlowDriveSpec:getCanMotorRun(superFunc, ...)
     local s = self.spec_flowDrive
     if s ~= nil then
@@ -403,7 +403,7 @@ function FlowDriveSpec:getCanMotorRun(superFunc, ...)
     return superFunc(self, ...)
 end
 
--- Le jeu appelle cette fonction aussi pour l'aide des touches : elle ne doit rien declencher (bug 1.0.0)
+-- The game also calls this function for the key help: it must not trigger anything (1.0.0 bug)
 function FlowDriveSpec:getMotorNotAllowedWarning(superFunc, ...)
     local s = self.spec_flowDrive
     if s ~= nil and s.preheatTimer > 0 then
@@ -412,8 +412,8 @@ function FlowDriveSpec:getMotorNotAllowedWarning(superFunc, ...)
     return superFunc(self, ...)
 end
 
--- 1.0.1 : appui sur la touche de demarrage. Rend true si FlowDrive garde l'appui pour lui
--- (prechauffage lance ou en cours) ; false : le jeu demarre normalement.
+-- 1.0.1: start key pressed. Returns true when FlowDrive keeps the key press for itself
+-- (preheating started or running); false: the game starts normally.
 function FlowDriveSpec.onStartKey(vehicle)
     local s = vehicle.spec_flowDrive
     if s == nil or (vehicle.getIsMotorStarted ~= nil and vehicle:getIsMotorStarted()) then
@@ -442,7 +442,7 @@ local function rangeName(s, range)
     return FlowDrive.RANGE_NAMES[range] or "?"
 end
 
--- 0.6.0 : noms traduits (menu, messages, affichage)
+-- 0.6.0: translated names (menu, messages, display)
 local FIELD_KEYS = {cvt = "fd_range_field", hst = "fd_range_work", harvester = "fd_range_harvest"}
 function FlowDriveSpec.getRangeLabel(s, range)
     if range == FlowDrive.RANGE_FIELD then
@@ -473,7 +473,7 @@ function FlowDriveSpec:onPostLoad(savegame)
         s.ramp = clamp(savegame.xmlFile:getValue(key .. "#ramp", s.ramp) or FlowDrive.RAMP_AUTO, 0, #FlowDrive.RAMPS)
         s.range = clamp(savegame.xmlFile:getValue(key .. "#range", s.range) or FlowDrive.RANGE_AUTO, 0, 2)
         s.ptoEco = savegame.xmlFile:getValue(key .. "#ptoEco", s.ptoEco) == true
-        -- 0.8.0 : une sauvegarde d'avant la 0.8.0 (sans #boostPct) repart boost coupe
+        -- 0.8.0: a savegame from before 0.8.0 (no #boostPct) starts with the boost off
         local savedPct = savegame.xmlFile:getValue(key .. "#boostPct", nil)
         if savedPct ~= nil then
             s.boostPct = clamp(savedPct, 1, FlowDrive.BOOST_MAX_PCT)
@@ -508,7 +508,7 @@ function FlowDriveSpec:saveToXMLFile(xmlFile, key, usedModNames)
 end
 
 ------------------------------------------------------------------------------------------
--- Vehicules concernes
+-- Vehicles handled
 ------------------------------------------------------------------------------------------
 
 local function isCvtAddonActive(vehicle)
@@ -519,8 +519,8 @@ local function isCvtAddonActive(vehicle)
     return cvt.CVTconfig ~= nil and cvt.CVTconfig ~= 0 and cvt.CVTconfig ~= 8
 end
 
--- Etape 1 : CVT des tracteurs. Etape 3 (0.3.0) : HST des chargeuses, telescopiques et automotrices.
--- Les moissonneuses (etape 4) viendront ensuite ; l'electrique reste au jeu.
+-- Tractor CVTs (step 1), hydrostatic loaders, telehandlers and self-propelled machines (0.3.0),
+-- harvesters (0.4.0). Electric motors stay with the game.
 function FlowDriveSpec.checkEligible(vehicle)
     local s = vehicle.spec_flowDrive
     local motorized = vehicle.spec_motorized
@@ -540,7 +540,7 @@ function FlowDriveSpec.checkEligible(vehicle)
         s.reasonKey = "fd_reason_noCvt"
         return
     end
-    -- 0.3.0 : moteur electrique laisse au jeu (pas de gasoil mais une charge electrique)
+    -- 0.3.0: electric motor left to the game (no diesel but an electric charge)
     local consumers = motorized.consumersByFillTypeName
     if type(consumers) == "table" and consumers.DIESEL == nil and consumers.ELECTRICCHARGE ~= nil then
         s.reason = "moteur electrique (laisse au jeu)"
@@ -549,7 +549,7 @@ function FlowDriveSpec.checkEligible(vehicle)
     end
     local upperCategory = category ~= nil and string.upper(category) or nil
     if vehicle.spec_combine ~= nil then
-        -- 0.4.0 : moissonneuses, ensileuses, arracheuses, machines a vendanger automotrices
+        -- 0.4.0: combines, forage harvesters, beet harvesters, self-propelled grape harvesters
         s.profile = "harvester"
     elseif upperCategory == nil or string.find(upperCategory, "TRACTOR", 1, true) ~= nil then
         s.profile = "cvt"
@@ -564,7 +564,7 @@ function FlowDriveSpec.checkEligible(vehicle)
     s.reason = ""
     local profile = getProfile(s)
 
-    -- Donnees de base du vehicule
+    -- Basic vehicle data
     s.ratedRpm = motor.maxRpm
     s.idleRpm = motor.minRpm
     local maxSpeed = safeCall(motor, "getMaximumForwardSpeed")
@@ -573,14 +573,14 @@ function FlowDriveSpec.checkEligible(vehicle)
     s.hydRpm = (s.idleRpm ~= nil and s.ratedRpm ~= nil) and math.floor((s.idleRpm + (s.ratedRpm - s.idleRpm) * profile.hydShare) / 10 + 0.5) * 10 or nil
     s.turnOnRpm = (s.idleRpm ~= nil and s.ratedRpm ~= nil) and math.floor((s.idleRpm + (s.ratedRpm - s.idleRpm) * profile.turnOnShare) / 10 + 0.5) * 10 or nil
 
-    -- 0.2.0 : regimes memorises par defaut (0.8.0 : le boost n'est plus active selon la marque)
+    -- 0.2.0: default engine speed memories (0.8.0: the boost is no longer enabled by brand)
     for index, share in ipairs(FlowDrive.MEMORY_SHARES) do
         if s.memRpm[index] == nil and s.idleRpm ~= nil and s.ratedRpm ~= nil then
             s.memRpm[index] = math.floor((s.idleRpm + (s.ratedRpm - s.idleRpm) * share) / 10 + 0.5) * 10
         end
     end
 
-    -- Constante vitesse / (regime / rapport) : rayon de la plus grande roue, recalibree en roulant
+    -- Speed constant / (engine speed / ratio): radius of the largest wheel, recalibrated while driving
     local radius = 0
     if vehicle.spec_wheels ~= nil and vehicle.spec_wheels.wheels ~= nil then
         for _, wheel in ipairs(vehicle.spec_wheels.wheels) do
@@ -592,12 +592,12 @@ function FlowDriveSpec.checkEligible(vehicle)
     end
     s.k = radius > 0.2 and radius * KMH_PER_RADIUS or K_DEFAULT
 
-    -- Courbe du moteur : regime de couple maxi, puissance maxi, et plancher de la limite de charge
-    -- (le regime le plus bas qui garde FlowDrive.DROOP_MIN_POWER de la puissance maxi)
+    -- Engine curve: peak torque engine speed, peak power, and floor of the load limit
+    -- (the lowest engine speed that keeps FlowDrive.DROOP_MIN_POWER of peak power)
     local bestTorque, bestRpm, bestPower = 0, nil, 0
     local powers = {}
     if motor.getTorqueCurveValue ~= nil and s.idleRpm ~= nil and s.ratedRpm ~= nil then
-        -- 0.8.0 : courbe d'origine, sans le facteur de boost
+        -- 0.8.0: original curve, without the boost factor
         s.measuringCurve = true
         for rpm = s.idleRpm, s.ratedRpm, 50 do
             local ok, torque = pcall(motor.getTorqueCurveValue, motor, rpm)
@@ -616,6 +616,8 @@ function FlowDriveSpec.checkEligible(vehicle)
     end
     s.peakTorqueRpm = bestRpm
     s.peakPower = bestPower > 0 and bestPower or nil
+    -- 1.0.2: game power in metric hp (torque in kNm x rpm x pi/30 = kW), shown in the menu
+    s.gameHp = s.peakPower ~= nil and math.floor(s.peakPower * math.pi / 30 * 1.3596 + 0.5) or nil
     s.droopFloorRpm = nil
     for _, entry in ipairs(powers) do
         if entry.power >= bestPower * FlowDrive.DROOP_MIN_POWER then
@@ -625,7 +627,7 @@ function FlowDriveSpec.checkEligible(vehicle)
     end
 end
 
--- Part de la puissance maxi disponible a un regime donne (pour le journal)
+-- Share of peak power available at a given engine speed (for the log)
 local function getPowerShare(vehicle, s, rpm)
     local motor = vehicle.spec_motorized ~= nil and vehicle.spec_motorized.motor or nil
     if motor == nil or s.peakPower == nil or type(rpm) ~= "number" or motor.getTorqueCurveValue == nil then
@@ -639,7 +641,7 @@ local function getPowerShare(vehicle, s, rpm)
 end
 
 ------------------------------------------------------------------------------------------
--- Detection du travail
+-- Work detection
 ------------------------------------------------------------------------------------------
 
 local function hasLoweredImplement(vehicle, depth)
@@ -663,8 +665,8 @@ local function hasLoweredImplement(vehicle, depth)
     return false
 end
 
--- 0.3.0 : plus forte commande de verin (chargeur, bras, benne, fraise...) sur le vehicule et ses outils.
--- Methode validee a l'etape 0 : movingTools[i].move vaut la commande du joueur (-1 a 1) pendant le mouvement.
+-- 0.3.0: strongest cylinder command (loader, boom, tipper, tiller...) on the vehicle and its implements.
+-- Method validated at step 0: movingTools[i].move holds the player command (-1 to 1) during the movement.
 local function getToolCommand(object)
     local strongest = 0
     local cylindered = type(object) == "table" and object.spec_cylindered or nil
@@ -712,7 +714,7 @@ local function scan(vehicle, s)
         s.rpmCap = nil
         s.droopTimer = 0
     end
-    -- 0.1.5 : frein moteur moins fort avec une charge attelee
+    -- 0.1.5: weaker engine braking with an attached load
     local ownMass = safeCall(vehicle, "getTotalMass", true)
     local totalMass = safeCall(vehicle, "getTotalMass")
     if type(ownMass) == "number" and type(totalMass) == "number" and ownMass > 0 and totalMass >= ownMass then
@@ -727,10 +729,10 @@ local function scan(vehicle, s)
     else
         s.work = "transport"
     end
-    -- 0.3.0 : automotrice en marche (melange, fraise) sans regime de PdF : regime hydraulique
+    -- 0.3.0: self-propelled machine running (mixing, tilling) without a PTO speed: hydraulic engine speed
     s.turnedOn = vehicle.spec_turnOnVehicle ~= nil and safeCall(vehicle, "getIsTurnedOn") == true
 
-    -- 0.8.0 : rampe auto, choisie selon la situation, changee seulement si elle dure RAMP_AUTO_HOLD
+    -- 0.8.0: auto ramp, chosen from the situation, changed only when it lasts RAMP_AUTO_HOLD
     local autoWanted
     if s.profile == "hst" then
         autoWanted = 4
@@ -764,10 +766,10 @@ local function scan(vehicle, s)
         s.rampAutoTimer = 0
     end
 
-    -- 0.2.0 : boost en transport (au-dessus de BOOST_SPEED_ON km/h) et avec la prise de force.
-    -- Le couple est modifie dans getTorqueCurveValue (FlowDriveMain) ; le moteur physique ne lit
-    -- la courbe qu'a updateMotorProperties, appele seulement quand le facteur change.
-    -- 0.8.0 : facteur = 1 + pct en mode "en plus" pendant le boost ; 1 / (1 + pct) en mode "inclus" hors boost.
+    -- 0.2.0: boost on the road (above BOOST_SPEED_ON km/h) and with the PTO.
+    -- Torque is changed in getTorqueCurveValue (FlowDriveMain); the physics motor only reads
+    -- the curve in updateMotorProperties, called only when the factor changes.
+    -- 0.8.0: factor = 1 + pct in "added" mode during boost; 1 / (1 + pct) in "included" mode outside boost.
     local speed = safeCall(vehicle, "getLastSpeed") or 0
     local boostOn = s.active and s.boostEnabled and (s.boostPct or 0) > 0
     local wantBoost = false
@@ -801,7 +803,7 @@ local function scan(vehicle, s)
     end
 end
 
--- 0.8.0 : rampe de base (auto ou choisie), avant la limite moteur froid
+-- 0.8.0: base ramp (auto or chosen), before the cold engine limit
 function FlowDriveSpec.getBaseRamp(s)
     if s.ramp == FlowDrive.RAMP_AUTO then
         return s.rampAuto or FlowDrive.DEFAULT_RAMP
@@ -809,7 +811,7 @@ function FlowDriveSpec.getBaseRamp(s)
     return s.ramp
 end
 
--- Libelle de la rampe pour l'affichage : "3" ou "auto 3"
+-- Ramp label for the display: "3" or "auto 3"
 function FlowDriveSpec.getRampLabel(s)
     local value = s.rampEff or FlowDriveSpec.getBaseRamp(s)
     if s.ramp == FlowDrive.RAMP_AUTO then
@@ -819,7 +821,7 @@ function FlowDriveSpec.getRampLabel(s)
 end
 
 ------------------------------------------------------------------------------------------
--- Loi de conduite
+-- Driving law
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSelection, isSelected)
@@ -836,12 +838,12 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.scanTimer = SCAN_INTERVAL
         scan(self, s)
     end
-    -- 0.1.4 : frein pied leve selon la rampe. Ecrit seulement quand la rampe ou l'etat change.
+    -- 0.1.4: off-pedal braking according to the ramp. Written only when the ramp or the state changes.
     if motor.lowBrakeForceScale ~= nil then
         if s.originalBrakeScale == nil then
             s.originalBrakeScale = motor.lowBrakeForceScale
             local base = motor.lowBrakeForceScale
-            -- EngineBrakeforceCompensation multiplie celui des CVT par 2,9 : on repart de la valeur d'origine
+            -- EngineBrakeforceCompensation multiplies the CVT value by 2.9: start again from the original value
             if g_modIsLoaded ~= nil and g_modIsLoaded["FS25_EngineBrakeforceCompensation"] and base >= 0.25 then
                 base = base / 2.9
             end
@@ -852,15 +854,15 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
             local rampEntry = FlowDrive.RAMPS[s.rampEff or s.ramp] or FlowDrive.RAMPS[FlowDrive.DEFAULT_RAMP]
             wanted = clamp(s.baseBrakeScale * (rampEntry.brakeFactor or 1) * (s.brakeMassFactor or 1) * getProfile(s).brakeMult, 0, 1)
         end
-        -- ecrit seulement si la valeur change vraiment (rampe, etat, ou masse attelee)
+        -- written only when the value really changes (ramp, state, or attached mass)
         if s.appliedBrakeScale == nil or math.abs(wanted - s.appliedBrakeScale) > 0.002 then
             s.appliedBrakeScale = wanted
             motor.lowBrakeForceScale = wanted
         end
     end
-    -- 0.2.1 : PdF eco. Le jeu impose le regime de PdF directement dans VehicleMotor:update
-    -- (PowerConsumer.getMaxPtoRpm x ptoMotorRpmRatio), sans passer par getRequiredMotorRpmRange.
-    -- On change donc ce rapport moteur/PdF, comme le boitier 540E/1000E d'un vrai tracteur.
+    -- 0.2.1: eco PTO. The game sets the PTO engine speed directly in VehicleMotor:update
+    -- (PowerConsumer.getMaxPtoRpm x ptoMotorRpmRatio), without going through getRequiredMotorRpmRange.
+    -- So this engine/PTO ratio is changed, like the 540E/1000E gearbox of a real tractor.
     if type(motor.ptoMotorRpmRatio) == "number" then
         if s.basePtoRatio == nil then
             s.basePtoRatio = motor.ptoMotorRpmRatio
@@ -874,7 +876,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         end
     end
 
-    -- 0.5.0 : temperatures, prechauffage, moteur froid (avant le reste : le moteur peut etre arrete)
+    -- 0.5.0: temperatures, preheating, cold engine (before the rest: the engine may be off)
     local motorOn = self.getIsMotorStarted ~= nil and self:getIsMotorStarted()
     if s.coldTest then
         if s.coldTestTemp == nil then
@@ -894,15 +896,15 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.preheatDone = true
         s.preheatTimer = 0
     else
-        -- moteur coupe : au prochain demarrage, nouveau prechauffage s'il fait froid et si le moteur
-        -- est retombe sous PREHEAT_ENGINE_MAX (updatePreheatNeed le verifie)
+        -- engine stopped: on the next start, preheat again if it is cold and the engine
+        -- has cooled below PREHEAT_ENGINE_MAX (updatePreheatNeed checks it)
         if s.wasMotorOn then
             s.wasMotorOn = false
             s.preheatDone = false
         end
         if s.preheatTimer > 0 then
             if not isPlayerControlled(self) then
-                -- le joueur est descendu : prechauffage abandonne
+                -- the player left: preheating abandoned
                 s.preheatTimer = 0
                 s.startRequested = false
             else
@@ -921,7 +923,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
             end
         end
     end
-    -- moteur froid : seuil d'ADS s'il est la, avec un peu d'hysteresis
+    -- cold engine: ADS threshold when present, with a little hysteresis
     local coldLimit = self.spec_AdvancedDamageSystem ~= nil and FlowDrive.COLD_TEMP_ADS or FlowDrive.COLD_TEMP_DEFAULT
     if s.engineTemp ~= nil and FlowDrive.settings.coldProtect then
         if s.cold and s.engineTemp >= coldLimit + FlowDrive.COLD_HYSTERESIS then
@@ -966,7 +968,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         return
     end
 
-    -- Mesures
+    -- Measurements
     local speed = safeCall(self, "getLastSpeed") or 0
     local rpm = safeCall(motor, "getLastModulatedMotorRpm") or motor.lastMotorRpm or 0
     local load = clamp(safeCall(self, "getMotorLoadPercentage") or 0, 0, 1)
@@ -981,7 +983,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     end
     s.lastSpeed = speedMs
 
-    -- Calibrage de la constante de vitesse, sur route et sans forte charge
+    -- Calibration of the speed constant, on the road and without heavy load
     local gearRatio = motor.gearRatio
     if speed > 8 and type(gearRatio) == "number" and gearRatio > 0 and rpm > 0 and s.work == "transport" and s.loadSmooth < 0.85 then
         local kNow = speed * gearRatio / rpm
@@ -991,15 +993,15 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         end
     end
 
-    -- Gamme
+    -- Range
     s.rangeActive = s.range == FlowDrive.RANGE_FIELD and FlowDrive.RANGE_FIELD or FlowDrive.RANGE_ROAD
-    -- 0.4.0 : moissonneuse en gamme auto : gamme recolte des que la machine est en marche
+    -- 0.4.0: harvester in auto range: harvest range as soon as the machine is running
     if s.range == FlowDrive.RANGE_AUTO and getProfile(s).autoField and s.turnedOn then
         s.rangeActive = FlowDrive.RANGE_FIELD
     end
     s.fieldMinRatio = (s.k ~= nil and s.fieldSpeed ~= nil and s.fieldSpeed > 0) and s.k * rated / s.fieldSpeed or nil
 
-    -- Vitesse visee : vitesse maxi de la gamme, ou celle du regulateur
+    -- Target speed: top speed of the range, or the cruise control speed
     local targetSpeed = s.rangeActive == FlowDrive.RANGE_FIELD and s.fieldSpeed or s.vmax
     local cruiseState = safeCall(self, "getCruiseControlState") or 0
     if cruiseState ~= 0 then
@@ -1011,8 +1013,8 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     s.targetSpeed = targetSpeed
     local wantsMore = pedal > 0.85 and speed < targetSpeed - 1.5
 
-    -- 0.3.0 : regime hydraulique. Un verin qui bouge (ou l'automotrice en marche) fait monter le regime,
-    -- tenu HYD_HOLD ms apres le mouvement, puis il redescend sur HYD_FALL ms.
+    -- 0.3.0: hydraulic engine speed. A moving cylinder (or a running self-propelled machine) raises engine speed,
+    -- held HYD_HOLD ms after the movement, then it falls back over HYD_FALL ms.
     s.hydCommand = FlowDrive.settings.hydraulic and getHydraulicCommand(self) or 0
     if s.hydCommand > FlowDrive.HYD_COMMAND_MIN then
         s.hydLevel = 1
@@ -1026,15 +1028,15 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     if s.hydLevel > 0 and s.hydRpm ~= nil then
         hydFloor = idle + (s.hydRpm - idle) * s.hydLevel
     end
-    -- 0.4.0 : machine en marche (melange, battage) : regime de travail du profil, sauf si une PdF
-    -- impose deja son regime (Oxbo 6030 : la PdF definie par le constructeur reste prioritaire)
+    -- 0.4.0: machine running (mixing, threshing): working engine speed of the profile, unless a PTO
+    -- already imposes its speed (Oxbo 6030: the PTO defined by the manufacturer stays in charge)
     local turnOnFloor = nil
     if FlowDrive.settings.hydraulic and s.turnedOn and s.work ~= "pto" and s.turnOnRpm ~= nil then
         turnOnFloor = s.turnOnRpm
     end
 
-    -- 0.3.0 : approche lente (touche tenue) : la vitesse maxi baisse de INCH_RATE km/h par seconde,
-    -- le regime reste celui du debut de l'approche (pour garder un hydraulique rapide)
+    -- 0.3.0: inching (key held): top speed drops by INCH_RATE km/h per second,
+    -- engine speed stays at its value when inching started (to keep fast hydraulics)
     s.inchMinRatio = nil
     if s.inchHeld and s.k ~= nil and s.k > 0 then
         if s.inchSpeed == nil then
@@ -1055,21 +1057,21 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.extraMinRpm = math.max(s.extraMinRpm or 0, s.inchRpm)
     end
 
-    -- 0.4.0 : regulation de debit (moissonneuse en marche) : la vitesse visee baisse quand la charge
-    -- moteur depasse FLOW_LOAD_HIGH, remonte sous FLOW_LOAD_LOW, sans depasser la consigne
-    -- (vitesse du regulateur, ou maxi de la gamme). Appliquee par le rapport mini (comme l'approche lente).
+    -- 0.4.0: crop flow control (harvester running): target speed drops when engine load
+    -- exceeds FLOW_LOAD_HIGH, rises again below FLOW_LOAD_LOW, without exceeding the setpoint
+    -- (cruise control speed, or range top speed). Applied through the minimum ratio (like inching).
     s.flowLoad = s.flowLoad + (load - s.flowLoad) * math.min(1, dt / FlowDrive.FLOW_LOAD_TIME)
     s.flowMinRatio = nil
     if s.profile == "harvester" and s.flowEnabled and s.turnedOn and s.k ~= nil and s.k > 0 then
         local setpoint = targetSpeed
-        -- flowSpeed = vitesse maxi imposee par la regulation. 0.4.1 : elle ne bride QUE apres une vraie
-        -- surcharge (flowLimited). Avant, un changement de consigne (regulateur monte ou coupe) etait pris
-        -- pour une bride et la vitesse ne remontait qu'a 0,4 km/h par seconde.
+        -- flowSpeed = top speed imposed by the control. 0.4.1: it only limits AFTER a real
+        -- overload (flowLimited). Before, a setpoint change (cruise control raised or turned off) was taken
+        -- for a limitation and the speed only rose again at 0.4 km/h per second.
         if not s.flowLimited or s.flowSpeed == nil then
             s.flowSpeed = setpoint
         end
         if s.flowLoad > FlowDrive.FLOW_LOAD_HIGH and speed > FlowDrive.FLOW_MIN_SPEED then
-            -- reagit tout de suite : part de la vitesse reelle, pas d'une consigne plus haute
+            -- reacts at once: starts from the real speed, not from a higher setpoint
             s.flowLimited = true
             s.flowSpeed = math.min(s.flowSpeed, speed + 0.5) - FlowDrive.FLOW_DOWN_RATE * dt / 1000
         elseif s.flowLimited and s.flowLoad < FlowDrive.FLOW_LOAD_LOW then
@@ -1087,22 +1089,22 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         s.flowLimited = false
     end
 
-    -- 0.5.0 : consommation reelle (l/h) : baisse du niveau de gasoil sur FUEL_WINDOW ms.
-    -- (lastFuelUsage du jeu a des pics : le jeu retire le gasoil par paquets)
+    -- 0.5.0: real fuel consumption (l/h): drop of the diesel level over FUEL_WINDOW ms.
+    -- (the game's lastFuelUsage has spikes: the game removes diesel in chunks)
     local consumers = motorized.consumersByFillTypeName
     local diesel = type(consumers) == "table" and consumers.DIESEL or nil
     if diesel ~= nil and diesel.fillUnitIndex ~= nil then
         local level = safeCall(self, "getFillUnitFillLevel", diesel.fillUnitIndex)
-        -- 0.6.1 : le jeu cumule la consommation dans consumer.fillLevelToChange avant de la retirer
-        -- du reservoir par paquets : on la compte tout de suite (niveau "reel")
+        -- 0.6.1: the game accumulates consumption in consumer.fillLevelToChange before removing it
+        -- from the tank in chunks: count it at once ("real" level)
         if type(level) == "number" and type(diesel.fillLevelToChange) == "number" then
             level = level - math.abs(diesel.fillLevelToChange)
         end
-        -- 0.6.1 : avec le niveau "reel" (paquets en attente compris), une simple fenetre de
-        -- FUEL_WINDOW ms suffit : consommation = baisse du niveau / temps.
+        -- 0.6.1: with the "real" level (pending chunks included), a simple window of
+        -- FUEL_WINDOW ms is enough: consumption = level drop / time.
         if type(level) == "number" then
             if s.fuelRefLevel == nil or level > s.fuelRefLevel + 0.5 then
-                -- debut de mesure, ou plein refait
+                -- start of measurement, or tank refilled
                 s.fuelRefLevel = level
                 s.fuelWinTime = 0
             else
@@ -1116,7 +1118,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         end
     end
 
-    -- Limite de charge : pleine charge prolongee sans accelerer
+    -- Load limit: sustained full load without accelerating
     if s.loadSmooth > FlowDrive.DROOP_LOAD_ON and s.accelSmooth < 0.1 and speed > 1 then
         s.droopTimer = s.droopTimer + dt
     elseif s.loadSmooth < FlowDrive.DROOP_LOAD_OFF or s.accelSmooth > 0.3 then
@@ -1124,27 +1126,27 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     end
     s.droopActive = s.droopTimer > FlowDrive.DROOP_DELAY
 
-    -- Regime maxi autorise
+    -- Maximum allowed engine speed
     local ecoMin = idle + (rated - idle) * FlowDrive.ECO_MIN_SHARE
     local target
     s.overrunMinRpm = nil
     s.fixedRpm = nil
     if s.memory > 0 and s.memRpm[s.memory] ~= nil then
-        -- 0.2.0 : regime memorise (accelerateur a main) : le moteur tient ce regime,
-        -- la vitesse se regle au regulateur ou a la pedale, par le rapport
+        -- 0.2.0: engine speed memory (hand throttle): the engine holds this speed,
+        -- ground speed is set with cruise control or the pedal, through the ratio
         s.fixedRpm = clamp(s.memRpm[s.memory], idle, rated)
         target = s.fixedRpm
         s.mode = "regime memorise " .. tostring(s.memory)
     elseif s.work == "pto" then
-        -- 0.2.0 : le moteur tient le regime de PdF (normal ou eco) ; sous la charge, c'est l'avancement qui cede
-        -- 0.2.1 : requiredMinRpm est deja le regime eco (rapport PdF modifie plus haut)
+        -- 0.2.0: the engine holds the PTO speed (normal or eco); under load, ground speed gives way
+        -- 0.2.1: requiredMinRpm is already the eco speed (PTO ratio changed above)
         local ptoRpm = s.requiredMinRpm or rated
         target = clamp(ptoRpm * FlowDrive.PTO_RPM_MARGIN, idle, rated)
         s.mode = s.ptoEco and "prise de force eco" or "prise de force"
     elseif pedal < 0.05 then
         target = ecoMin
         s.mode = "pied leve"
-        -- 0.1.3 : frein moteur selon la rampe, par un regime mini que la boite doit tenir
+        -- 0.1.3: engine braking according to the ramp, through a minimum engine speed the transmission must hold
         local rampEntry = FlowDrive.RAMPS[s.rampEff or s.ramp] or FlowDrive.RAMPS[FlowDrive.DEFAULT_RAMP]
         local share = rampEntry.overrunRpmShare or 0
         if share > 0 and speed > FlowDrive.OVERRUN_MIN_SPEED then
@@ -1156,8 +1158,8 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         target = math.max(rated * (1 - droop), s.droopFloorRpm or s.peakTorqueRpm or 0, ecoMin)
         s.mode = "limite de charge"
     elseif wantsMore then
-        -- 0.1.1 : le regime monte selon le besoin reel (rampe douce = regime bas)
-        -- 0.1.2 : avec un regime mini par rampe (rampe 4 = regime nominal, comme en 0.1.0)
+        -- 0.1.1: engine speed rises with the real demand (gentle ramp = low engine speed)
+        -- 0.1.2: with a minimum engine speed per ramp (ramp 4 = rated speed, as in 0.1.0)
         local rampEntry = FlowDrive.RAMPS[s.rampEff or s.ramp] or FlowDrive.RAMPS[FlowDrive.DEFAULT_RAMP]
         local rampRpm = idle + (rated - idle) * (rampEntry.accelRpmShare or 1)
         target = clamp(math.max(rpm * s.loadSmooth / FlowDrive.ACCEL_TARGET_LOAD, rampRpm), ecoMin, rated)
@@ -1166,7 +1168,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
         target = clamp(rpm * s.loadSmooth / FlowDrive.ECO_TARGET_LOAD, ecoMin, rated)
         s.mode = "eco"
     end
-    -- 0.1.1 : jamais sous le regime necessaire pour tenir la vitesse au rapport mini autorise
+    -- 0.1.1: never below the engine speed needed to hold the speed at the minimum allowed ratio
     if s.work ~= "pto" and s.k ~= nil and s.k > 0 and type(s.ratioIn) == "number" and s.ratioIn > 0 then
         local minRatio = s.ratioIn
         if s.rangeActive == FlowDrive.RANGE_FIELD and s.fieldMinRatio ~= nil then
@@ -1177,7 +1179,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
             target = math.max(target, math.min(rpmNeeded, rated))
         end
     end
-    -- 0.3.0 : le plafond ne descend jamais sous le regime hydraulique ou d'approche
+    -- 0.3.0: the cap never goes below the hydraulic or inching engine speed
     if s.extraMinRpm ~= nil and s.extraMinRpm > target then
         target = math.min(s.extraMinRpm, rated)
         if s.inchRpm ~= nil then
@@ -1191,8 +1193,8 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
     if s.flowMinRatio ~= nil then
         s.mode = s.mode .. " + debit"
     end
-    -- 0.5.0 : moteur froid : plafond de regime, y compris pour les regimes hydraulique, memorise, d'approche
-    -- (le regime de PdF reste impose par le jeu et l'outil)
+    -- 0.5.0: cold engine: engine speed cap, including hydraulic, memorised and inching speeds
+    -- (the PTO engine speed stays imposed by the game and the implement)
     if s.coldCap ~= nil then
         if target > s.coldCap then
             target = s.coldCap
@@ -1205,9 +1207,9 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
             s.fixedRpm = math.min(s.fixedRpm, s.coldCap)
         end
     end
-    -- 0.3.1 : boite au neutre (vehicule pas encore parti depuis qu'on est monte) : le jeu ignore alors le
-    -- regime mini demande et prend max(lastPtoRpm, minRpm) (VehicleMotor:update). On releve donc aussi
-    -- lastPtoRpm, comme le fait une prise de force ; le jeu le fait redescendre seul ensuite.
+    -- 0.3.1: gearbox in neutral (vehicle has not moved since the player got in): the game then ignores
+    -- the requested minimum engine speed and uses max(lastPtoRpm, minRpm) (VehicleMotor:update). So
+    -- lastPtoRpm is raised too, like a PTO does; the game brings it back down on its own afterwards.
     local holdRpm = math.max(s.extraMinRpm or 0, s.fixedRpm or 0)
     if holdRpm > idle + 50 and type(motor.lastPtoRpm) == "number" and motor.lastPtoRpm < holdRpm then
         motor.lastPtoRpm = math.min(holdRpm, rated)
@@ -1222,7 +1224,7 @@ function FlowDriveSpec:onUpdate(dt, isActiveForInput, isActiveForInputIgnoreSele
 end
 
 ------------------------------------------------------------------------------------------
--- Panneau de reglage et journal
+-- Measurement panel and log
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.updateDisplay(vehicle, s, motor, dt, m)
@@ -1293,11 +1295,11 @@ function FlowDriveSpec:onDraw(isActiveForInput, isActiveForInputIgnoreSelection,
     if s == nil then
         return
     end
-    -- 0.6.0 : affichage FlowDrive (reglage general)
+    -- 0.6.0: FlowDrive display (general setting)
     if FlowDrive.settings.hud and isActiveForInputIgnoreSelection then
         FlowDriveSpec.drawHud(self, s)
     end
-    -- 0.5.0 : voyant de prechauffage, toujours visible
+    -- 0.5.0: preheating lamp, always visible
     if s.preheatTimer > 0 then
         setTextAlignment(RenderText.ALIGN_CENTER)
         setTextBold(true)
@@ -1321,7 +1323,7 @@ function FlowDriveSpec:onDraw(isActiveForInput, isActiveForInputIgnoreSelection,
 end
 
 ------------------------------------------------------------------------------------------
--- Touches (provisoires jusqu'au menu de l'etape 6)
+-- Keys (only the menu has a default binding)
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec:onRegisterActionEvents(isActiveForInput, isActiveForInputIgnoreSelection)
@@ -1358,15 +1360,15 @@ function FlowDriveSpec:onRegisterActionEvents(isActiveForInput, isActiveForInput
             g_inputBinding:setActionEventTextPriority(actionEventId, priority)
         end
     end
-    -- 0.3.0 : approche lente, touche tenue (appel a l'appui et au relachement), sans raccourci par defaut
+    -- 0.3.0: inching, key held (called on press and release), no default binding
     local _, inchEventId = self:addActionEvent(s.actionEvents, "FLOWDRIVE_INCHING", self, FlowDriveSpec.actionInching, true, true, false, true, nil)
     if inchEventId ~= nil then
         g_inputBinding:setActionEventTextVisibility(inchEventId, false)
     end
 end
 
--- 0.5.0 : essai froid (touche provisoire, pour tester sans attendre l'hiver) : air a -15 degres,
--- moteur simule froid qui chauffe en roulant. Le prechauffage se declenche au prochain demarrage.
+-- 0.5.0: cold test (to test without waiting for winter): air at -15 degrees,
+-- simulated cold engine that warms up while driving. Preheating starts on the next engine start.
 function FlowDriveSpec.actionColdTest(self, actionName, inputValue, callbackState, isAnalog)
     local s = self.spec_flowDrive
     if s == nil then
@@ -1405,7 +1407,7 @@ function FlowDriveSpec.actionInching(self, actionName, inputValue, callbackState
     s.inchHeld = (inputValue or 0) > 0
 end
 
--- 0.7.0 : changement de gamme refuse au-dessus de RANGE_CHANGE_MAX_SPEED (avec un message)
+-- 0.7.0: range change refused above RANGE_CHANGE_MAX_SPEED (with a message)
 function FlowDriveSpec.canChangeRange(vehicle, s)
     local speed = safeCall(vehicle, "getLastSpeed") or 0
     if speed > FlowDrive.RANGE_CHANGE_MAX_SPEED then
@@ -1415,7 +1417,7 @@ function FlowDriveSpec.canChangeRange(vehicle, s)
     return true
 end
 
--- 0.6.0 : menu de reglages
+-- 0.6.0: settings menu
 function FlowDriveSpec.actionMenu(self, actionName, inputValue, callbackState, isAnalog)
     if self.spec_flowDrive ~= nil and FlowDriveMenu ~= nil and FlowDriveMenu.show ~= nil then
         scan(self, self.spec_flowDrive)
@@ -1423,7 +1425,7 @@ function FlowDriveSpec.actionMenu(self, actionName, inputValue, callbackState, i
     end
 end
 
--- Appele par le menu apres OK
+-- Called by the menu after OK
 function FlowDriveSpec.onSettingsChanged(vehicle)
     local s = vehicle.spec_flowDrive
     if s == nil then
@@ -1453,7 +1455,7 @@ function FlowDriveSpec.actionRamp(self, actionName, inputValue, callbackState, i
     if s == nil then
         return
     end
-    -- 0.8.0 : auto -> 1 -> 2 -> 3 -> 4 -> auto
+    -- 0.8.0: auto -> 1 -> 2 -> 3 -> 4 -> auto
     s.ramp = (s.ramp + 1) % (#FlowDrive.RAMPS + 1)
     if s.ramp == FlowDrive.RAMP_AUTO then
         notify(FlowDrive.t("fd_msg_rampAuto"))
@@ -1525,7 +1527,7 @@ function FlowDriveSpec.actionDebug(self, actionName, inputValue, callbackState, 
 end
 
 ------------------------------------------------------------------------------------------
--- 0.2.0 : prise de force eco, regime memorise, boost
+-- 0.2.0: eco PTO, engine speed memory, boost
 ------------------------------------------------------------------------------------------
 
 function FlowDriveSpec.actionPtoEco(self, actionName, inputValue, callbackState, isAnalog)

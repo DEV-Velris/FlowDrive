@@ -1,127 +1,127 @@
--- FlowDrive 0.1.0 - etape 1 : CVT moderne, mode pedale
--- Ce fichier : constantes, enregistrement de la specialisation, accroches du moteur.
+-- FlowDrive - realistic CVT / hydrostatic transmission behaviour for FS25
+-- This file: constants, specialization registration, motor hooks.
 --
--- Principe : FlowDrive ne reecrit jamais le regime, le rapport ou la charge apres coup.
--- Il repond aux questions que le jeu pose au moteur a chaque image :
---   getMinMaxGearRatio                -> rapports autorises (gamme champ)
---   getAccelerationLimit              -> acceleration maxi (rampe)
---   getMotorRotationAccelerationLimit -> vitesse de montee du regime (rampe)
---   getRequiredMotorRpmRange          -> regime maxi autorise (eco, limite de charge)
--- Chaque accroche appelle d'abord la fonction d'origine (et celles des autres mods, ADS compris),
--- puis ajuste le resultat. Sans FlowDrive actif sur le vehicule, elle ne change rien.
+-- Principle: FlowDrive never rewrites engine speed, gear ratio or load after the fact.
+-- It answers the questions the game asks the motor every frame:
+--   getMinMaxGearRatio                -> allowed ratios (field range)
+--   getAccelerationLimit              -> maximum acceleration (ramp)
+--   getMotorRotationAccelerationLimit -> how fast engine speed rises (ramp)
+--   getRequiredMotorRpmRange          -> maximum allowed engine speed (eco, load limit)
+-- Each hook first calls the original function (and those of other mods, ADS included),
+-- then adjusts the result. When FlowDrive is not active on the vehicle, it changes nothing.
 
 FlowDrive = FlowDrive or {}
 FlowDrive.MOD_NAME = g_currentModName
 FlowDrive.MOD_DIR = g_currentModDirectory
-FlowDrive.VERSION = "1.0.1.0"
+FlowDrive.VERSION = "1.0.2.0"
 FlowDrive.SPEC_NAME = "flowDrive"
 
--- Rampes : acceleration maxi (m/s2), part de la montee de regime,
--- regime mini en acceleration (part de la plage ralenti-nominal, 0.1.2),
--- regime mini pied leve = frein moteur par raccourcissement du rapport (0.1.3).
--- et frein pied leve (0.1.4) : multiplicateur de lowBrakeForceScale. Le jeu freine pied leve avec
--- brakePedal = lowBrakeForceScale au-dessus de 3,6 km/h (WheelsUtil.updateWheelsPhysics).
--- Mesure 0.1.4 sur le Q305 a vide : ralentissement ~ 0,15 + 4,8 x lowBrakeForceScale (m/s2).
--- Mesure 0.1.5 a vide : 0,05 -> 0,40 m/s2 ; 0,26 -> 1,77 m/s2 (pas tout a fait lineaire).
--- 0.1.6 : facteurs recales sur ces deux points pour 0,4 / 0,7 / 1,0 / 1,4 m/s2 a vide (valeur d'origine 0,10).
+-- Ramps: maximum acceleration (m/s2), share of engine speed rise,
+-- minimum engine speed while accelerating (share of the idle-rated range, 0.1.2),
+-- minimum engine speed off-pedal = engine braking by shortening the ratio (0.1.3),
+-- and off-pedal braking (0.1.4): multiplier of lowBrakeForceScale. Off-pedal, the game brakes with
+-- brakePedal = lowBrakeForceScale above 3.6 km/h (WheelsUtil.updateWheelsPhysics).
+-- Measured in 0.1.4 on an empty Q305: deceleration ~ 0.15 + 4.8 x lowBrakeForceScale (m/s2).
+-- Measured in 0.1.5, empty: 0.05 -> 0.40 m/s2; 0.26 -> 1.77 m/s2 (not quite linear).
+-- 0.1.6: factors fitted on these two points for 0.4 / 0.7 / 1.0 / 1.4 m/s2 empty (original value 0.10).
 FlowDrive.RAMPS = {
     {accel = 0.4, rot = 0.50, accelRpmShare = 0.35, overrunRpmShare = 0.00, brakeFactor = 0.50},
     {accel = 0.8, rot = 0.70, accelRpmShare = 0.50, overrunRpmShare = 0.20, brakeFactor = 1.00},
     {accel = 1.3, rot = 0.85, accelRpmShare = 0.75, overrunRpmShare = 0.35, brakeFactor = 1.40},
     {accel = 2.0, rot = 1.00, accelRpmShare = 1.00, overrunRpmShare = 0.50, brakeFactor = 2.05}
 }
--- 0.1.5 : avec une charge attelee, le frein moteur retient moins (racine de masse propre / masse totale)
+-- 0.1.5: with an attached load, engine braking holds less (square root of own mass / total mass)
 FlowDrive.BRAKE_MASS_MIN = 0.5
-FlowDrive.OVERRUN_MIN_SPEED = 3        -- km/h : sous cette vitesse, plus de frein moteur impose (arret en douceur)
+FlowDrive.OVERRUN_MIN_SPEED = 3        -- km/h: below this speed, no forced engine braking (smooth stop)
 FlowDrive.DEFAULT_RAMP = 3
 
--- Gammes
+-- Ranges
 FlowDrive.RANGE_AUTO = 0
 FlowDrive.RANGE_FIELD = 1
 FlowDrive.RANGE_ROAD = 2
 FlowDrive.RANGE_NAMES = {[0] = "auto", [1] = "champ", [2] = "route"}
-FlowDrive.FIELD_SPEED_SHARE = 0.55     -- gamme champ : 55 % de la vitesse maxi
-FlowDrive.RANGE_CHANGE_MAX_SPEED = 10  -- km/h : 0.7.0 : au-dessus, changement de gamme refuse (question 7 : bloquer et avertir)
+FlowDrive.FIELD_SPEED_SHARE = 0.55     -- field range: 55 % of top speed
+FlowDrive.RANGE_CHANGE_MAX_SPEED = 10  -- km/h: 0.7.0: above this, range change refused (design choice: block and warn)
 
--- Regime eco et limite de charge
-FlowDrive.ECO_TARGET_LOAD = 0.80       -- le regime eco vise une charge moteur de 80 %
-FlowDrive.ACCEL_TARGET_LOAD = 0.70     -- en acceleration, le regime monte jusqu'a une charge de 70 % (0.1.1)
-FlowDrive.RPM_FLOOR_MARGIN = 1.05      -- plancher : regime necessaire pour tenir la vitesse au rapport mini, + 5 % (0.1.1)
-FlowDrive.DROOP_MIN_POWER = 0.90       -- la limite de charge garde au moins 90 % de la puissance maxi (0.1.1)
-FlowDrive.ECO_MIN_SHARE = 0.35         -- regime eco mini : ralenti + 35 % de la plage
-FlowDrive.CAP_RISE_TIME = 400          -- ms : le regime remonte vite quand on demande
-FlowDrive.CAP_FALL_TIME = 2500         -- ms : il redescend doucement
-FlowDrive.DROOP_LOAD_ON = 0.93         -- pleine charge
+-- Eco engine speed and load limit
+FlowDrive.ECO_TARGET_LOAD = 0.80       -- eco engine speed aims at 80 % engine load
+FlowDrive.ACCEL_TARGET_LOAD = 0.70     -- while accelerating, engine speed rises up to 70 % load (0.1.1)
+FlowDrive.RPM_FLOOR_MARGIN = 1.05      -- floor: engine speed needed to hold the speed at the minimum ratio, + 5 % (0.1.1)
+FlowDrive.DROOP_MIN_POWER = 0.90       -- the load limit keeps at least 90 % of peak power (0.1.1)
+FlowDrive.ECO_MIN_SHARE = 0.35         -- minimum eco engine speed: idle + 35 % of the range
+FlowDrive.CAP_RISE_TIME = 400          -- ms: engine speed rises quickly on demand
+FlowDrive.CAP_FALL_TIME = 2500         -- ms: it falls back slowly
+FlowDrive.DROOP_LOAD_ON = 0.93         -- full load
 FlowDrive.DROOP_LOAD_OFF = 0.85
-FlowDrive.DROOP_DELAY = 1500           -- ms de pleine charge sans accelerer avant la chute de regime
+FlowDrive.DROOP_DELAY = 1500           -- ms of full load without accelerating before the engine speed drop
 FlowDrive.DROOP = {transport = 0.15, traction = 0.25}
 
 FlowDrive.WORK_NAMES = {transport = "transport", traction = "traction", pto = "prise de force"}
 
--- 0.2.0 : prise de force eco (540E / 1000E : meme regime de PdF a environ 78 % du regime moteur)
+-- 0.2.0: eco PTO (540E / 1000E: same PTO speed at about 78 % of engine speed)
 FlowDrive.PTO_ECO_FACTOR = 0.78
-FlowDrive.PTO_RPM_MARGIN = 1.03        -- avec la PdF, le regime maxi autorise = regime de PdF + 3 %
--- 0.2.0 : regimes memorises par defaut (part de la plage ralenti-nominal) et pas de reglage
+FlowDrive.PTO_RPM_MARGIN = 1.03        -- with the PTO, maximum allowed engine speed = PTO engine speed + 3 %
+-- 0.2.0: default engine speed memories (share of the idle-rated range) and adjustment step
 FlowDrive.MEMORY_SHARES = {0.65, 0.90}
 FlowDrive.MEMORY_STEP = 50
--- 0.2.0 : boost (type Sigma Power / IPM) en transport et avec la PdF.
--- 0.8.0 : desactive par defaut ; pourcentage saisi par machine (0 a BOOST_MAX_PCT) ;
--- "inclus" : la puissance du jeu est deja celle avec boost (John Deere, Case IH, Valtra, Fendt 728 de base),
--- FlowDrive la retire hors boost. "en plus" : le boost s'ajoute (Massey Ferguson de base).
+-- 0.2.0: boost (Sigma Power / IPM style) on the road and with the PTO.
+-- 0.8.0: off by default; percentage entered per vehicle (0 to BOOST_MAX_PCT);
+-- "included": the game power is already the boosted power (base game John Deere, Case IH, Valtra, Fendt 728),
+-- FlowDrive removes it outside boost. "added": the boost comes on top (base game Massey Ferguson).
 FlowDrive.BOOST_DEFAULT_PCT = 8
 FlowDrive.BOOST_MAX_PCT = 30
 FlowDrive.BOOST_SPEED_ON = 16          -- km/h
 FlowDrive.BOOST_SPEED_OFF = 12         -- km/h (hysteresis)
-FlowDrive.BOOST_MIN_INTERVAL = 1500    -- ms entre deux changements (chaque changement recharge la courbe moteur)
+FlowDrive.BOOST_MIN_INTERVAL = 1500    -- ms between two changes (each change reloads the engine curve)
 
--- 0.8.0 : rampe auto (rampe 0) : 2 au travail ou tres charge, 3 a vide, 4 sur chargeuse
+-- 0.8.0: auto ramp (ramp 0): 2 at work or heavily loaded, 3 when empty, 4 on loaders
 FlowDrive.RAMP_AUTO = 0
-FlowDrive.RAMP_AUTO_HEAVY = 2.0        -- masse totale / masse du tracteur au-dela de laquelle on reste en rampe 2
-FlowDrive.RAMP_AUTO_HOLD = 2000        -- ms : la situation doit durer avant de changer de rampe
+FlowDrive.RAMP_AUTO_HEAVY = 2.0        -- total mass / tractor mass above which the ramp stays at 2
+FlowDrive.RAMP_AUTO_HOLD = 2000        -- ms: the situation must last this long before the ramp changes
 
--- 0.3.0 : profils de transmission. cvt = tracteurs ; hst = chargeuses, telescopiques, automotrices.
--- hydShare : regime hydraulique (part de la plage ralenti-nominal) quand un verin bouge
--- brakeMult : frein pied leve (un hydrostatique retient plus fort qu'une CVT de tracteur)
--- fieldShare / fieldName : gamme lente (champ pour un tracteur, travail pour une chargeuse)
--- 0.4.0 : turnOnShare : regime tenu quand la machine elle-meme est en marche (melange, battage) sans regime
--- de PdF defini ; autoField : la gamme auto passe en gamme lente quand la machine est en marche
+-- 0.3.0: transmission profiles. cvt = tractors; hst = loaders, telehandlers, self-propelled machines.
+-- hydShare: hydraulic engine speed (share of the idle-rated range) when a cylinder moves
+-- brakeMult: off-pedal braking (a hydrostatic drive holds harder than a tractor CVT)
+-- fieldShare / fieldName: slow range (field for a tractor, work for a loader)
+-- 0.4.0: turnOnShare: engine speed held when the machine itself is running (mixing, threshing) with no
+-- PTO speed defined; autoField: the auto range switches to the slow range when the machine is running
 FlowDrive.PROFILES = {
     cvt = {label = "CVT tracteur", hydShare = 0.50, turnOnShare = 0.50, brakeMult = 1.0, fieldShare = 0.55, fieldName = "champ", autoField = false},
     hst = {label = "HST", hydShare = 0.60, turnOnShare = 0.60, brakeMult = 1.5, fieldShare = 0.50, fieldName = "travail", autoField = false},
     harvester = {label = "moissonneuse", hydShare = 0.60, turnOnShare = 1.00, brakeMult = 1.5, fieldShare = 0.40, fieldName = "recolte", autoField = true}
 }
--- 0.4.0 : regulation de debit des moissonneuses (charge moteur lissee sur FLOW_LOAD_TIME ms)
-FlowDrive.FLOW_LOAD_HIGH = 0.90        -- au-dessus : la vitesse visee baisse
-FlowDrive.FLOW_LOAD_LOW = 0.75         -- en dessous : elle remonte jusqu'a la consigne
-FlowDrive.FLOW_DOWN_RATE = 1.0         -- km/h par seconde
-FlowDrive.FLOW_UP_RATE = 0.4           -- km/h par seconde
+-- 0.4.0: harvester crop flow control (engine load smoothed over FLOW_LOAD_TIME ms)
+FlowDrive.FLOW_LOAD_HIGH = 0.90        -- above: target speed drops
+FlowDrive.FLOW_LOAD_LOW = 0.75         -- below: it rises back to the setpoint
+FlowDrive.FLOW_DOWN_RATE = 1.0         -- km/h per second
+FlowDrive.FLOW_UP_RATE = 0.4           -- km/h per second
 FlowDrive.FLOW_MIN_SPEED = 1.5         -- km/h
 FlowDrive.FLOW_LOAD_TIME = 1000        -- ms
 
--- 0.5.0 : prechauffage automatique a la mise du contact (temperature de l'air, celle du jeu)
-FlowDrive.PREHEAT_AMBIENT = 5          -- degres C : en dessous, prechauffage
-FlowDrive.PREHEAT_ENGINE_MAX = 30      -- degres C : moteur encore chaud au-dessus, pas de prechauffage
-FlowDrive.PREHEAT_MIN = 2000           -- ms (a 5 degres)
-FlowDrive.PREHEAT_MAX = 15000          -- ms (vers -20 degres)
-FlowDrive.PREHEAT_PER_DEGREE = 520     -- ms par degre sous PREHEAT_AMBIENT
--- 0.5.0 : moteur froid. Seuil 50 degres comme ADS (stable et beta) ; 40 sans ADS.
--- Plafond a 72 % du regime maxi : sous l'alerte moteur froid d'ADS beta (75 %).
+-- 0.5.0: automatic preheating when starting (air temperature from the game weather)
+FlowDrive.PREHEAT_AMBIENT = 5          -- degrees C: below, preheating
+FlowDrive.PREHEAT_ENGINE_MAX = 30      -- degrees C: engine still warm above, no preheating
+FlowDrive.PREHEAT_MIN = 2000           -- ms (at 5 degrees)
+FlowDrive.PREHEAT_MAX = 15000          -- ms (around -20 degrees)
+FlowDrive.PREHEAT_PER_DEGREE = 520     -- ms per degree below PREHEAT_AMBIENT
+-- 0.5.0: cold engine. 50 degree threshold like ADS (stable and beta); 40 without ADS.
+-- Cap at 72 % of max engine speed: below the ADS beta cold engine warning (75 %).
 FlowDrive.COLD_TEMP_ADS = 50
 FlowDrive.COLD_TEMP_DEFAULT = 40
 FlowDrive.COLD_HYSTERESIS = 2
 FlowDrive.COLD_RPM_SHARE = 0.72
 FlowDrive.COLD_MAX_RAMP = 2
--- 0.5.0 : mode essai froid (touche provisoire) : air a -15 degres, moteur simule qui chauffe en roulant
+-- 0.5.0: cold test mode (optional key): air at -15 degrees, simulated engine that warms up while driving
 FlowDrive.COLDTEST_AMBIENT = -15
-FlowDrive.COLDTEST_WARM_RATE = 0.6     -- degres par seconde a pleine charge
--- 0.5.0 : consommation mesuree sur la baisse du niveau de gasoil
+FlowDrive.COLDTEST_WARM_RATE = 0.6     -- degrees per second at full load
+-- 0.5.0: fuel consumption measured from the drop of the diesel level
 FlowDrive.FUEL_WINDOW = 10000          -- ms
 
 ------------------------------------------------------------------------------------------
--- 0.6.0 : textes (l10n/l10n_fr.xml, l10n_en.xml) et reglages generaux (modSettings)
+-- 0.6.0: texts (l10n/l10n_fr.xml, l10n_en.xml) and general settings (modSettings)
 ------------------------------------------------------------------------------------------
 
--- Texte traduit. Les textes d'un mod sont dans son environnement (comme CVT Addon et ADS les lisent).
+-- Translated text. A mod's texts live in its own environment (the way CVT Addon and ADS read them).
 function FlowDrive.t(key)
     local i18n = g_i18n
     if i18n ~= nil and i18n.modEnvironments ~= nil and i18n.modEnvironments[FlowDrive.MOD_NAME] ~= nil then
@@ -144,7 +144,7 @@ function FlowDrive.tf(key, ...)
     return FlowDrive.t(key)
 end
 
--- Reglages generaux, communs a tous les vehicules et a toutes les parties
+-- General settings, shared by all vehicles and all savegames
 FlowDrive.settings = {hydraulic = true, preheat = true, coldProtect = true, hud = true, hudPos = 1, dbl = true}
 FlowDrive.SETTINGS_BOOLS = {"hydraulic", "preheat", "coldProtect", "hud", "dbl"}
 
@@ -203,12 +203,12 @@ FlowDrive.HST_CATEGORIES = {
     FRONTLOADERVEHICLES = true, TELELOADERVEHICLES = true, SKIDSTEERVEHICLES = true,
     WHEELLOADERVEHICLES = true, FORAGEMIXERS = true, FORKLIFTS = true
 }
--- 0.3.0 : regime hydraulique
-FlowDrive.HYD_COMMAND_MIN = 0.05       -- commande de verin mini pour compter un mouvement
-FlowDrive.HYD_HOLD = 800               -- ms : le regime reste haut apres le mouvement (0.3.1 : 2000 juge trop long)
-FlowDrive.HYD_FALL = 1000              -- ms : puis redescend sur cette duree (0.3.1 : 1500 avant)
--- 0.3.0 : approche lente (inching), touche optionnelle sans raccourci par defaut
-FlowDrive.INCH_RATE = 5                -- km/h par seconde de touche tenue
+-- 0.3.0: hydraulic engine speed
+FlowDrive.HYD_COMMAND_MIN = 0.05       -- minimum cylinder command counted as a movement
+FlowDrive.HYD_HOLD = 800               -- ms: engine speed stays high after the movement (0.3.1: 2000 was too long)
+FlowDrive.HYD_FALL = 1000              -- ms: then falls back over this time (0.3.1: was 1500)
+-- 0.3.0: inching, optional key with no default binding
+FlowDrive.INCH_RATE = 5                -- km/h per second while the key is held
 FlowDrive.INCH_MIN_SPEED = 1.0         -- km/h
 
 local SPEC_NAME = FlowDrive.SPEC_NAME
@@ -225,7 +225,7 @@ for typeName, typeEntry in pairs(g_vehicleTypeManager.types) do
     end
 end
 
--- Etat FlowDrive du moteur, ou nil si FlowDrive n'agit pas sur ce vehicule
+-- FlowDrive state of the motor, or nil when FlowDrive does not act on this vehicle
 local function getState(motor)
     local vehicle = motor.vehicle
     if vehicle == nil then
@@ -245,15 +245,15 @@ function FlowDrive.hookMinMaxGearRatio(motor, superFunc, ...)
         return minRatio, maxRatio
     end
     state.ratioIn = minRatio
-    -- marche avant seulement (rapports positifs)
+    -- forward only (positive ratios)
     if state.fieldMinRatio ~= nil and state.rangeActive == FlowDrive.RANGE_FIELD and minRatio > 0 and maxRatio > minRatio then
         minRatio = math.min(math.max(minRatio, state.fieldMinRatio), maxRatio)
     end
-    -- 0.3.0 : approche lente : le rapport s'allonge pour ralentir sans baisser le regime
+    -- 0.3.0: inching: the ratio lengthens to slow down without lowering engine speed
     if state.inchMinRatio ~= nil and minRatio > 0 and maxRatio > minRatio then
         minRatio = math.min(math.max(minRatio, state.inchMinRatio), maxRatio)
     end
-    -- 0.4.0 : regulation de debit : meme principe, la vitesse maxi suit la charge moteur
+    -- 0.4.0: crop flow control: same principle, top speed follows engine load
     if state.flowMinRatio ~= nil and minRatio > 0 and maxRatio > minRatio then
         minRatio = math.min(math.max(minRatio, state.flowMinRatio), maxRatio)
     end
@@ -266,7 +266,7 @@ function FlowDrive.hookAccelerationLimit(motor, superFunc, ...)
     if state == nil or type(limit) ~= "number" then
         return limit
     end
-    -- 0.5.0 : rampEff = rampe reellement appliquee (limitee moteur froid)
+    -- 0.5.0: rampEff = ramp actually applied (limited when the engine is cold)
     local ramp = FlowDrive.RAMPS[state.rampEff or state.ramp] or FlowDrive.RAMPS[FlowDrive.DEFAULT_RAMP]
     return math.min(limit, ramp.accel)
 end
@@ -287,30 +287,30 @@ function FlowDrive.hookRequiredMotorRpmRange(motor, superFunc, ...)
     if state == nil or type(minRpm) ~= "number" or type(maxRpm) ~= "number" then
         return minRpm, maxRpm
     end
-    -- regime impose par la PdF (deja reduit en PdF eco : la spec modifie motor.ptoMotorRpmRatio, 0.2.1)
+    -- engine speed imposed by the PTO (already reduced in eco PTO: the spec changes motor.ptoMotorRpmRatio, 0.2.1)
     state.requiredMinRpm = minRpm
-    -- 0.2.0 : regime memorise : le moteur tient ce regime
+    -- 0.2.0: engine speed memory: the engine holds this speed
     if state.fixedRpm ~= nil then
         minRpm = math.max(minRpm, math.min(state.fixedRpm, maxRpm))
     end
-    -- 0.3.0 : regime hydraulique (verin en mouvement) et regime tenu en approche lente
+    -- 0.3.0: hydraulic engine speed (moving cylinder) and engine speed held while inching
     if state.extraMinRpm ~= nil then
         minRpm = math.max(minRpm, math.min(state.extraMinRpm, maxRpm))
     end
     if state.rpmCap ~= nil then
         maxRpm = math.max(minRpm, math.min(maxRpm, state.rpmCap))
     end
-    -- 0.1.3 : frein moteur pied leve, la boite raccourcit pour tenir ce regime
+    -- 0.1.3: off-pedal engine braking, the transmission shortens the ratio to hold this speed
     if state.overrunMinRpm ~= nil then
         minRpm = math.max(minRpm, math.min(state.overrunMinRpm, maxRpm))
     end
     return minRpm, maxRpm
 end
 
--- 0.2.0 : boost. Meme methode qu'ADS : la courbe de couple est multipliee ici, et la spec appelle
--- vehicle:updateMotorProperties() quand le boost change, pour que le moteur physique la relise.
--- 0.8.0 : torqueFactor est calcule par la spec (1 si FlowDrive inactif ou boost coupe) ; il peut etre
--- inferieur a 1 en mode "inclus" hors boost. Lu directement (pas getState) : la spec le remet a 1 elle-meme.
+-- 0.2.0: boost. Same method as ADS: the torque curve is multiplied here, and the spec calls
+-- vehicle:updateMotorProperties() when the boost changes, so the physics motor reads it again.
+-- 0.8.0: torqueFactor is computed by the spec (1 when FlowDrive is inactive or boost is off); it can be
+-- below 1 in "included" mode outside boost. Read directly (not getState): the spec resets it to 1 itself.
 function FlowDrive.hookTorqueCurveValue(motor, superFunc, ...)
     local torque = superFunc(motor, ...)
     local vehicle = motor.vehicle
@@ -337,8 +337,8 @@ if not FlowDrive.hooksInstalled then
     installMotorHook("getMotorRotationAccelerationLimit", FlowDrive.hookMotorRotationAccelerationLimit)
     installMotorHook("getRequiredMotorRpmRange", FlowDrive.hookRequiredMotorRpmRange)
     installMotorHook("getTorqueCurveValue", FlowDrive.hookTorqueCurveValue)
-    -- 1.0.1 : touche de demarrage (Entree) : lance le prechauffage s'il fait froid. Remplace avant le
-    -- chargement des vehicules, donc vu aussi par ADS qui rappelle Motorized.actionEventToggleMotorState.
+    -- 1.0.1: start key (Enter): starts preheating when it is cold. Replaced before vehicles are loaded,
+    -- so ADS, which calls Motorized.actionEventToggleMotorState again, sees it too.
     local function wrapStartAction(name)
         if Motorized == nil or type(Motorized[name]) ~= "function" then
             print("[FlowDrive] ATTENTION : Motorized." .. name .. " introuvable, prechauffage sans touche")
@@ -358,7 +358,7 @@ if not FlowDrive.hooksInstalled then
     wrapStartAction("actionEventToggleMotorState")
     wrapStartAction("actionEventSetMotorStateOn")
     print("[FlowDrive] version " .. FlowDrive.VERSION .. " chargee")
-    -- 0.7.0 : mods voisins detectes (compatibilite)
+    -- 0.7.0: neighbouring mods detected (compatibility)
     local function loaded(name)
         return g_modIsLoaded ~= nil and g_modIsLoaded[name] == true
     end

@@ -36,8 +36,9 @@
         <text name="fd_opt_mem_tt" text="Value kept in the savegame."/>
         <text name="fd_opt_boost" text="Boost"/>
         <text name="fd_opt_boostMode" text="Game power"/>
-        <text name="fd_opt_boostMode_tt" text="Included: the game power already includes the boost (John Deere, Case IH, Valtra, Fendt 728…), FlowDrive lowers it outside boost. Added: the boost comes on top (Massey Ferguson…)."/>
-        <text name="fd_opt_boost_tt" text="Above 16 km/h with no lowered implement, and with the PTO. Use the “Boost: enter %” button to change the value (real tractors: 5 to 10 %)."/>
+        <text name="fd_opt_boostModeHp" text="Game power (%d hp)"/>
+        <text name="fd_opt_boostMode_tt" text="Compare this power with the real spec sheet. Included: it is already the boosted power, FlowDrive lowers it outside boost. Added: it is the power without boost, the boost comes on top."/>
+        <text name="fd_opt_boost_tt" text="Above 16 km/h with no lowered implement, and with the PTO. Use the “Boost: enter %” button to change the value (real tractors: 5 to 20 %)."/>
         <text name="fd_opt_flow" text="Automatic crop flow (harvesters)"/>
         <text name="fd_opt_flow_tt" text="Speed drops when engine load exceeds 90 %, then rises below 75 % up to the cruise speed."/>
         <text name="fd_opt_hydraulic" text="Automatic hydraulic engine speed"/>

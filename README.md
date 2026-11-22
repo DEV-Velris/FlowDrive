@@ -1,70 +1,71 @@
 # FlowDrive
 
-Mod pour **Farming Simulator 25** : un comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST). Il s'applique à toutes les machines compatibles, sans rien à acheter ni à configurer.
+**English** · [Français](README.fr.md)
 
-- Version : **1.0.1.0**
-- Solo uniquement (le multijoueur est prévu en 1.1).
-- **Ne pas utiliser avec CVT Addon.** Les deux modifient la même chose. Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
+A mod for **Farming Simulator 25** that gives continuously variable (CVT) and hydrostatic (HST) transmissions realistic behaviour. It works on every eligible vehicle, with nothing to buy or configure.
 
-## Ce que fait le mod
+- Version: **1.0.2.0** ([changelog](CHANGELOG.md))
+- Single player only (multiplayer is planned for 1.1).
+- **Do not use together with CVT Addon.** Both change the same things. When CVT Addon is active on a vehicle, FlowDrive does nothing on it.
 
-| Machines | Fonctions |
+## What it does
+
+| Vehicles | Features |
 |---|---|
-| Tracteurs (CVT) | Rampes d'accélération (Auto ou 1 à 4) ; régime éco ; limite de charge ; gammes champ et route ; frein moteur adapté au poids attelé ; PdF éco ; régimes mémorisés ; boost réglable |
-| Chargeuses, télescopiques, automotrices (HST) | Régime hydraulique automatique quand un vérin bouge ; gamme travail ; approche lente |
-| Moissonneuses | Gammes récolte et route (récolte automatique en battage) ; débit auto (la vitesse baisse quand le moteur sature) |
-| Toutes | Préchauffage à la touche de démarrage par temps froid ; protection moteur froid ; écrans DashboardLive qui lisaient CVT Addon |
+| Tractors (CVT) | Acceleration ramps (Auto or 1 to 4); eco engine speed; load limit; field and road ranges; engine braking adapted to the attached weight; eco PTO; engine speed memories; adjustable boost |
+| Loaders, telehandlers, self-propelled machines (HST) | Automatic hydraulic engine speed when a cylinder moves; work range; inching |
+| Harvesters | Harvest and road ranges (harvest range automatic while threshing); automatic crop flow (speed drops when the engine is overloaded) |
+| All | Preheating on the start key in cold weather; cold engine protection; DashboardLive screens that used to read CVT Addon |
 
-Les boîtes manuelles, les machines électriques et les locomotives restent gérées par le jeu.
+Manual gearboxes, electric vehicles and locomotives stay with the game.
 
-Le fonctionnement détaillé est dans [docs/FONCTIONNEMENT.md](docs/FONCTIONNEMENT.md).
+How it works in detail: [docs/FONCTIONNEMENT.md](docs/FONCTIONNEMENT.md) (in French).
 
-## Réglages
+## Settings
 
-- **Menu FlowDrive : `Maj gauche + Alt gauche + T`**, dans la machine. Il permet de régler, pour chaque machine : marche, rampe, gamme, PdF éco, régime mémorisé, boost, puissance du jeu (boost inclus ou en plus) et débit auto. Il contient aussi les réglages généraux : hydraulique, préchauffage, protection froid, affichage, DashboardLive.
-- Les autres fonctions n'ont pas de touche par défaut. On peut leur en donner une dans *Options → Commandes* (lignes « FlowDrive : … ») :
-  - rampe suivante ;
-  - gamme suivante ;
-  - PdF éco ;
-  - régime mémorisé (arrêt / 1 / 2), + et − ;
-  - boost ;
-  - débit auto ;
-  - approche lente (touche tenue) ;
-  - marche / arrêt ;
-  - panneau de mesure ;
-  - essai froid.
+- **FlowDrive menu: `Left Shift + Left Alt + T`**, inside the vehicle. Per vehicle: on/off, ramp, range, eco PTO, engine speed memory, boost, game power (boost included or added) and crop flow. It also holds the general settings: hydraulics, preheating, cold protection, display, DashboardLive.
+- The other functions have no default key. Bind them in *Options → Controls* ("FlowDrive: …" lines):
+  - next ramp;
+  - next range;
+  - eco PTO;
+  - engine speed memory (off / 1 / 2), + and −;
+  - boost;
+  - crop flow;
+  - inching (hold the key);
+  - on / off;
+  - measurement panel;
+  - cold test.
 
-Les réglages par machine sont enregistrés dans la sauvegarde. Les réglages généraux vont dans `modSettings/FS25_FlowDrive.xml`.
+Per-vehicle settings are stored in the savegame. General settings go to `modSettings/FS25_FlowDrive.xml`.
 
-## Quel boost régler ?
+## Which boost to set?
 
-Le boost est **désactivé par défaut**. Pour savoir quoi mettre sur un tracteur, voir [docs/BOOST.md](docs/BOOST.md). Ce document donne la règle de décision et la liste des machines déjà vérifiées. Il est écrit pour être lu aussi par une IA : on lui donne le lien, la marque, le modèle et la puissance affichée dans le magasin du jeu.
+The boost is **off by default**. The menu shows the vehicle's power in the game on the "Game power (… hp)" row. Compare it with the real tractor's spec sheet. The decision rule and the vehicles already checked are in [docs/BOOST.md](docs/BOOST.md) (in French). That document is written to be read by an AI as well: give it the link, the brand, the model and the game power.
 
-## Compatibilité testée
+## Tested compatibility
 
-- Advanced Damage System (stable et beta) : FlowDrive utilise sa température moteur.
-- Courseplay : FlowDrive s'applique aussi aux ouvriers.
+- Advanced Damage System (stable and beta): FlowDrive uses its engine temperature.
+- Courseplay: FlowDrive also applies to AI workers.
 - DashboardLive.
 - EngineBrakeforceCompensation.
 - ValtraPackage.
 
-## Contenu du dépôt
+## Repository content
 
-| Dossier | Contenu |
+| Folder | Content |
 |---|---|
-| `FS25_FlowDrive/` | le mod, tel qu'il est zippé |
-| `docs/` | fonctionnement détaillé, guide du boost |
-| `tools/` | `build.ps1` (fabrique le zip), `luacheck_blocks.js` (vérifie la structure des fichiers Lua) |
-| `CHANGELOG.md` | historique des versions |
+| `FS25_FlowDrive/` | the mod, as it is zipped |
+| `docs/` | detailed behaviour, boost guide (in French) |
+| `tools/` | `build.ps1` (builds the zip), `luacheck_blocks.js` (checks the structure of the Lua files) |
 
-## Fabriquer le zip
+## Building the zip
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build.ps1
 ```
 
-Le script vérifie les fichiers Lua (si Node.js est installé). Il crée ensuite `dist/FS25_FlowDrive.zip` et une copie numérotée `dist/FS25_FlowDrive_<version>.zip`. Pour installer, copier `FS25_FlowDrive.zip` dans le dossier `mods`, **jeu fermé**.
+The script checks the Lua files (when Node.js is installed). It then creates `dist/FS25_FlowDrive.zip` and a numbered copy `dist/FS25_FlowDrive_<version>.zip`. To install, copy `FS25_FlowDrive.zip` into the `mods` folder **with the game closed**. Do not rename the zip: the game identifies a mod by this name.
 
-## Auteur
+## Author
 
 Velris
