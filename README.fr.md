@@ -4,6 +4,7 @@
 
 Mod pour **Farming Simulator 25** : un comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST). Il s'applique à toutes les machines compatibles, sans rien à acheter ni à configurer.
 
+- Site et assistant boost : **https://dev-velris.github.io/FlowDrive/**
 - Version : **1.0.2.0** ([historique des versions](CHANGELOG.fr.md))
 - Solo uniquement (le multijoueur est prévu en 1.1).
 - **Ne pas utiliser avec CVT Addon.** Les deux modifient la même chose. Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
@@ -40,7 +41,7 @@ Les réglages par machine sont enregistrés dans la sauvegarde. Les réglages g�
 
 ## Quel boost régler ?
 
-Le boost est **désactivé par défaut**. Le menu affiche la puissance de la machine dans le jeu, sur la ligne « Puissance du jeu (… ch) ». Il suffit de la comparer à la fiche réelle du tracteur. La règle de décision et les machines déjà vérifiées sont dans [docs/BOOST.md](docs/BOOST.md). Ce document est écrit pour être lu aussi par une IA : donnez-lui le lien, la marque, le modèle et la puissance du jeu.
+Le boost est **désactivé par défaut**. Le menu affiche la puissance de la machine dans le jeu, sur la ligne « Puissance du jeu (… ch) ». Il suffit de la comparer à la fiche réelle du tracteur. La règle de décision et les machines déjà vérifiées sont dans [docs/BOOST.md](docs/BOOST.md). L'[assistant boost](https://dev-velris.github.io/FlowDrive/#boost) prépare la question pour une IA (Google mode IA, ChatGPT, Claude, Perplexity) à partir de la marque, du modèle et de la puissance du jeu.
 
 ## Compatibilité testée
 
@@ -55,7 +56,7 @@ Le boost est **désactivé par défaut**. Le menu affiche la puissance de la mac
 | Dossier | Contenu |
 |---|---|
 | `FS25_FlowDrive/` | le mod, tel qu'il est zippé |
-| `docs/` | fonctionnement détaillé, guide du boost (en français) |
+| `docs/` | site (`index.html`, publié par GitHub Pages), fonctionnement détaillé, guide du boost (en français) |
 | `tools/` | `build.ps1` (fabrique le zip), `luacheck_blocks.js` (vérifie la structure des fichiers Lua) |
 
 ## Fabriquer le zip

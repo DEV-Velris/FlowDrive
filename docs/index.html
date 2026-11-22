@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlowDrive pour FS25</title>
+<meta name="description" content="FlowDrive, mod de transmission CVT et hydrostatique pour Farming Simulator 25 : fonctionnement, installation et assistant de réglage du boost.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232f7d4f'/%3E%3Cpath d='M9 20 Q16 6 23 20' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f5f0;
+  --surface: #ffffff;
+  --surface-2: #eef0e8;
+  --text: #1d2420;
+  --muted: #5b6660;
+  --border: #d9ddd2;
+  --accent: #2f7d4f;
+  --accent-strong: #236140;
+  --on-accent: #ffffff;
+  --warn-bg: #fff4dc;
+  --warn-border: #e8c46a;
+  --warn-text: #5c4300;
+  --error: #b3261e;
+  --focus: #1a73e8;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614;
+    --surface: #1a201d;
+    --surface-2: #222a26;
+    --text: #e6ebe7;
+    --muted: #9aa69f;
+    --border: #2f3934;
+    --accent: #5fbf86;
+    --accent-strong: #7fd3a0;
+    --on-accent: #0f1a14;
+    --warn-bg: #33290f;
+    --warn-border: #7a6224;
+    --warn-text: #f1dc9c;
+    --error: #f2b8b5;
+    --focus: #8ab4f8;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1a201d; --surface-2: #222a26; --text: #e6ebe7; --muted: #9aa69f;
+  --border: #2f3934; --accent: #5fbf86; --accent-strong: #7fd3a0; --on-accent: #0f1a14;
+  --warn-bg: #33290f; --warn-border: #7a6224; --warn-text: #f1dc9c; --error: #f2b8b5; --focus: #8ab4f8; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent-strong); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header.top {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+header.top .wrap { display: flex; align-items: center; gap: 16px; min-height: 56px; }
+.brand { font-weight: 700; font-size: 18px; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 26px; height: 26px; }
+nav.links { display: flex; gap: 16px; margin-left: auto; font-size: 15px; }
+nav.links a { text-decoration: none; color: var(--muted); }
+nav.links a:hover { color: var(--text); }
+.lang { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lang button {
+  border: 0; background: transparent; color: var(--muted); padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.lang button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+@media (max-width: 640px) { nav.links { display: none; } .lang { margin-left: auto; } }
+
+.hero { padding: 56px 0 32px; }
+.hero h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.02em; }
+.hero p.lead { font-size: 19px; color: var(--muted); margin: 0 0 24px; max-width: 680px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.tag { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border-radius: 10px; font: inherit; font-weight: 600; font-size: 15px;
+  text-decoration: none; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+section { padding: 40px 0; border-top: 1px solid var(--border); }
+section h2 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.01em; }
+section > .wrap > p.sub { color: var(--muted); margin: 0 0 24px; max-width: 720px; }
+
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; box-shadow: var(--shadow);
+}
+.card h3 { margin: 0 0 6px; font-size: 17px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+ol.steps { padding-left: 22px; margin: 0; }
+ol.steps li { margin: 0 0 10px; }
+kbd {
+  font: 600 13px/1 ui-monospace, Consolas, monospace; padding: 3px 6px; border-radius: 5px;
+  border: 1px solid var(--border); border-bottom-width: 2px; background: var(--surface-2); white-space: nowrap;
+}
+code { font: 14px ui-monospace, Consolas, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+.note {
+  border: 1px solid var(--warn-border); background: var(--warn-bg); color: var(--warn-text);
+  border-radius: 12px; padding: 12px 16px; font-size: 15px; margin: 16px 0;
+}
+
+.assistant { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 24px; }
+@media (max-width: 820px) { .assistant { grid-template-columns: 1fr; } }
+form .field { margin-bottom: 14px; }
+label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.hint { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+input[type="text"], input[type="number"], textarea {
+  width: 100%; font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px;
+}
+input[aria-invalid="true"] { border-color: var(--error); }
+.error { color: var(--error); font-size: 13px; min-height: 18px; }
+textarea { min-height: 260px; resize: vertical; font-size: 14px; line-height: 1.5; }
+.ai-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.ai-buttons .btn { width: 100%; }
+.copy-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.status { font-size: 14px; color: var(--accent-strong); }
+
+.settings-explained { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-top: 8px; }
+.settings-explained .card p { font-size: 14px; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 620px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--surface-2); font-size: 14px; }
+tr:last-child td { border-bottom: 0; }
+.verdict { font-weight: 600; white-space: nowrap; }
+.verdict.on { color: var(--accent-strong); }
+
+footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--border); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--accent)"/><path d="M9 20 Q16 6 23 20" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+      FlowDrive
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#features" data-i18n="nav_features">Fonctionnement</a>
+      <a href="#install" data-i18n="nav_install">Installation</a>
+      <a href="#boost" data-i18n="nav_boost">Assistant boost</a>
+      <a href="https://github.com/DEV-Velris/FlowDrive">GitHub</a>
+    </nav>
+    <div class="lang" role="group" aria-label="Langue / Language">
+      <button type="button" data-set-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-set-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <h1 data-i18n="hero_title">Des boîtes CVT qui se conduisent comme les vraies</h1>
+      <p class="lead" data-i18n="hero_lead">FlowDrive est un mod pour Farming Simulator 25. Il donne aux transmissions à variation continue et hydrostatiques un comportement réaliste, sur toutes les machines compatibles, sans rien à acheter ni à configurer.</p>
+      <div class="tags">
+        <span class="tag">Version 1.0.2.0</span>
+        <span class="tag" data-i18n="tag_solo">Solo</span>
+        <span class="tag" data-i18n="tag_lang">Français · English</span>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/DEV-Velris/FlowDrive/releases/latest" data-i18n="btn_download">Télécharger</a>
+        <a class="btn" href="#boost" data-i18n="btn_boost">Régler mon boost</a>
+        <a class="btn" href="https://github.com/DEV-Velris/FlowDrive" data-i18n="btn_source">Code source</a>
+      </div>
+      <div class="note" data-i18n-html="hero_warn"><strong>Ne pas utiliser avec CVT Addon.</strong> Les deux mods modifient la même chose. Désactivez CVT Addon dans la sélection des mods de votre partie avant d'activer FlowDrive.</div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2 data-i18n="feat_title">Ce que fait FlowDrive</h2>
+      <p class="sub" data-i18n="feat_sub">FlowDrive ne force jamais le régime après coup : il répond aux questions que le jeu pose au moteur à chaque image. Le résultat reste compatible avec les autres mods, comme ADS ou Courseplay.</p>
+      <div class="grid">
+        <div class="card"><h3 data-i18n="f1_t">Rampes d'accélération</h3><p data-i18n="f1_p">Auto ou 1 à 4. En Auto, la rampe suit la situation : douce au travail ou très chargé, plus vive à vide, la plus vive sur une chargeuse.</p></div>
+        <div class="card"><h3 data-i18n="f2_t">Régime éco et limite de charge</h3><p data-i18n="f2_p">Le moteur tourne au régime utile, pas plus. Sous une forte charge prolongée, le régime baisse un peu pour rester sur le couple, comme une vraie CVT.</p></div>
+        <div class="card"><h3 data-i18n="f3_t">Gammes champ et route</h3><p data-i18n="f3_p">Une gamme lente pour le travail et une gamme route. Changement refusé au-dessus de 10 km/h. Sur une moissonneuse, la gamme récolte se met toute seule en battage.</p></div>
+        <div class="card"><h3 data-i18n="f4_t">Prise de force éco et mémoires</h3><p data-i18n="f4_p">PdF éco (540E / 1000E) : même régime de PdF avec environ 22 % de régime moteur en moins. Deux régimes mémorisés, comme un accélérateur à main.</p></div>
+        <div class="card"><h3 data-i18n="f5_t">Boost réglable</h3><p data-i18n="f5_p">Un surplus de puissance en transport et à la prise de force, comme les vrais tracteurs. Désactivé par défaut : l'assistant plus bas aide à le régler.</p></div>
+        <div class="card"><h3 data-i18n="f6_t">Hydraulique et approche lente</h3><p data-i18n="f6_p">Sur les chargeuses, télescopiques et automotrices, le régime monte tout seul quand un vérin bouge. L'approche lente ralentit sans baisser le régime.</p></div>
+        <div class="card"><h3 data-i18n="f7_t">Moissonneuses</h3><p data-i18n="f7_p">Débit auto : la vitesse baisse quand le moteur sature, puis remonte jusqu'à la vitesse du régulateur.</p></div>
+        <div class="card"><h3 data-i18n="f8_t">Froid</h3><p data-i18n="f8_p">Sous 5 °C, préchauffage à l'appui sur la touche de démarrage. Moteur froid : régime et rampe limités jusqu'à ce qu'il chauffe (température d'ADS s'il est installé).</p></div>
+        <div class="card"><h3 data-i18n="f9_t">Écrans DashboardLive</h3><p data-i18n="f9_p">Les écrans qui lisaient CVT Addon continuent d'afficher la rampe, la gamme et les voyants.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2 data-i18n="inst_title">Installation</h2>
+      <ol class="steps">
+        <li data-i18n-html="inst_1">Téléchargez <code>FS25_FlowDrive.zip</code> depuis la page <a href="https://github.com/DEV-Velris/FlowDrive/releases/latest">Releases</a>.</li>
+        <li data-i18n-html="inst_2"><strong>Jeu fermé</strong>, copiez le zip dans <code>Documents\My Games\FarmingSimulator2025\mods</code>. Ne le renommez pas : le jeu reconnaît un mod à ce nom.</li>
+        <li data-i18n-html="inst_3">Dans la sélection des mods de votre partie, cochez FlowDrive et décochez CVT Addon s'il y est.</li>
+        <li data-i18n-html="inst_4">En jeu, dans une machine : <kbd>Maj gauche</kbd> + <kbd>Alt gauche</kbd> + <kbd>T</kbd> ouvre le menu FlowDrive. Les autres fonctions peuvent recevoir une touche dans <em>Options → Commandes</em>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="boost">
+    <div class="wrap">
+      <h2 data-i18n="boost_title">Assistant de réglage du boost</h2>
+      <p class="sub" data-i18n="boost_sub">Le boost est désactivé par défaut. Pour le régler, il faut comparer la puissance du tracteur dans le jeu à sa vraie fiche. Remplissez le formulaire : une IA fera la recherche avec la bonne méthode.</p>
+
+      <div class="settings-explained">
+        <div class="card"><h3 data-i18n="s1_t">Boost : désactivé ou %</h3><p data-i18n="s1_p">Le surplus de puissance, de 1 à 30 %. Actif en transport au-dessus de 16 km/h et avec la prise de force.</p></div>
+        <div class="card"><h3 data-i18n="s2_t">Puissance du jeu : inclus</h3><p data-i18n="s2_p">La puissance du jeu est déjà celle avec boost. FlowDrive la baisse quand le boost ne s'applique pas.</p></div>
+        <div class="card"><h3 data-i18n="s3_t">Puissance du jeu : en plus</h3><p data-i18n="s3_p">La puissance du jeu est celle sans boost. FlowDrive ajoute le boost quand il s'applique.</p></div>
+      </div>
+
+      <div class="assistant">
+        <form id="boostForm" class="card" novalidate>
+          <div class="field">
+            <label for="brand" data-i18n="l_brand">Marque</label>
+            <input type="text" id="brand" autocomplete="off" placeholder="Valtra" required>
+            <div class="error" id="brandErr" aria-live="polite"></div>
+          </div>
+          <div class="field">
+            <label for="model" data-i18n="l_model">Modèle</label>
+            <input type="text" id="model" autocomplete="off" placeholder="N175 Direct" required>
+            <div class="error" id="modelErr" aria-live="polite"></div>
+          </div>
+          <div class="field">
+            <label for="hp"><span data-i18n="l_hp">Puissance dans le jeu (ch)</span>
+              <span class="hint" data-i18n="l_hp_hint">Affichée dans le menu FlowDrive, ligne « Puissance du jeu (… ch) ».</span></label>
+            <input type="number" id="hp" inputmode="numeric" min="20" max="2000" placeholder="201" required>
+            <div class="error" id="hpErr" aria-live="polite"></div>
+          </div>
+          <div class="field">
+            <label for="source"><span data-i18n="l_src">Mod ou pack (facultatif)</span>
+              <span class="hint" data-i18n="l_src_hint">Jeu de base, ou nom du mod qui ajoute le tracteur.</span></label>
+            <input type="text" id="source" autocomplete="off" placeholder="ValtraPackage">
+          </div>
+          <button type="submit" class="btn primary" data-i18n="btn_prepare">Préparer la question</button>
+        </form>
+
+        <div class="card">
+          <label for="prompt" data-i18n="l_prompt">Question pour l'IA</label>
+          <textarea id="prompt" readonly></textarea>
+          <div class="ai-buttons">
+            <button type="button" class="btn" data-ai="google" disabled data-i18n="ai_google">Google (mode IA)</button>
+            <button type="button" class="btn" data-ai="chatgpt" disabled>ChatGPT</button>
+            <button type="button" class="btn" data-ai="claude" disabled>Claude</button>
+            <button type="button" class="btn" data-ai="perplexity" disabled>Perplexity</button>
+          </div>
+          <div class="copy-row">
+            <button type="button" class="btn" id="copyBtn" disabled data-i18n="btn_copy">Copier la question</button>
+            <span class="status" id="copyStatus" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="note" data-i18n-html="ai_warn"><strong>La réponse d'une IA est une estimation.</strong> Vérifiez les chiffres sur la fiche du constructeur avant de les reprendre. Si l'IA ne trouve pas de chiffres fiables, laissez le boost désactivé.</div>
+    </div>
+  </section>
+
+  <section id="verified">
+    <div class="wrap">
+      <h2 data-i18n="ver_title">Machines déjà vérifiées</h2>
+      <p class="sub" data-i18n="ver_sub">Réglages établis à partir des fiches constructeur et d'essais publiés. Détails et sources dans BOOST.md.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th data-i18n="th_machine">Machine</th>
+            <th data-i18n="th_game">Dans le jeu</th>
+            <th data-i18n="th_real">En vrai</th>
+            <th data-i18n="th_setting">Réglage FlowDrive</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Valtra N175 Direct <span class="hint">ValtraPackage</span></td><td>201 ch</td><td data-i18n="r1_real">165 ch / 680 Nm ; Sigma Power 201 ch / 800 Nm</td><td class="verdict on" data-i18n="r1_set">18 %, inclus</td></tr>
+            <tr><td>Fendt 211 Vario</td><td>114 ch</td><td data-i18n="r2_real">114 ch ; DynamicPerformance 124 ch</td><td class="verdict on" data-i18n="r2_set">9 %, en plus</td></tr>
+            <tr><td>Valtra Q305 <span class="hint">ValtraPackage</span></td><td>305 ch</td><td data-i18n="r3_real">305 ch constants, pas de boost</td><td class="verdict" data-i18n="off">Désactivé</td></tr>
+            <tr><td>Valtra S416</td><td>420 ch</td><td data-i18n="r4_real">420 ch constants (seul S sans boost)</td><td class="verdict" data-i18n="off">Désactivé</td></tr>
+            <tr><td>John Deere S7 900</td><td>625 ch</td><td data-i18n="r5_real">543 ch nominal, 617 ch maxi</td><td class="verdict" data-i18n="off">Désactivé</td></tr>
+            <tr><td>Schäffer 9660T, Manitou MLT 841, Volvo L180H, Kuhn SPW Intense, Oxbo 6030</td><td>—</td><td data-i18n="r6_real">pas de boost</td><td class="verdict" data-i18n="off">Désactivé</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span data-i18n="foot_by">FlowDrive, par Velris</span>
+    <a href="https://github.com/DEV-Velris/FlowDrive" data-i18n="foot_repo">Dépôt GitHub</a>
+    <a href="https://github.com/DEV-Velris/FlowDrive/blob/main/docs/BOOST.md" data-i18n="foot_boost">Guide du boost (BOOST.md)</a>
+    <a href="https://github.com/DEV-Velris/FlowDrive/blob/main/CHANGELOG.md" data-i18n="foot_changes">Historique des versions</a>
+    <a href="https://github.com/DEV-Velris/FlowDrive/issues" data-i18n="foot_issues">Signaler un problème</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var BOOST_DOC = "https://raw.githubusercontent.com/DEV-Velris/FlowDrive/main/docs/BOOST.md";
+
+  var T = {
+    en: {
+      nav_features: "How it works", nav_install: "Install", nav_boost: "Boost assistant",
+      hero_title: "CVT transmissions that drive like the real thing",
+      hero_lead: "FlowDrive is a mod for Farming Simulator 25. It gives continuously variable and hydrostatic transmissions realistic behaviour, on every eligible vehicle, with nothing to buy or configure.",
+      tag_solo: "Single player", tag_lang: "English · Français",
+      btn_download: "Download", btn_boost: "Set my boost", btn_source: "Source code",
+      hero_warn: "<strong>Do not use together with CVT Addon.</strong> Both mods change the same things. Disable CVT Addon in your savegame's mod selection before enabling FlowDrive.",
+      feat_title: "What FlowDrive does",
+      feat_sub: "FlowDrive never forces engine speed after the fact: it answers the questions the game asks the engine every frame. It stays compatible with other mods such as ADS or Courseplay.",
+      f1_t: "Acceleration ramps", f1_p: "Auto or 1 to 4. In Auto, the ramp follows the situation: gentle at work or heavily loaded, livelier when empty, liveliest on a loader.",
+      f2_t: "Eco engine speed and load limit", f2_p: "The engine runs at the speed it needs, no more. Under sustained heavy load, engine speed drops a little to stay on the torque, like a real CVT.",
+      f3_t: "Field and road ranges", f3_p: "A slow range for work and a road range. Change refused above 10 km/h. On a harvester, the harvest range engages by itself while threshing.",
+      f4_t: "Eco PTO and memories", f4_p: "Eco PTO (540E / 1000E): same PTO speed with about 22 % less engine speed. Two engine speed memories, like a hand throttle.",
+      f5_t: "Adjustable boost", f5_p: "Extra power on the road and with the PTO, like real tractors. Off by default: the assistant below helps you set it.",
+      f6_t: "Hydraulics and inching", f6_p: "On loaders, telehandlers and self-propelled machines, engine speed rises by itself when a cylinder moves. Inching slows down without lowering engine speed.",
+      f7_t: "Harvesters", f7_p: "Automatic crop flow: speed drops when the engine is overloaded, then rises back to the cruise control speed.",
+      f8_t: "Cold weather", f8_p: "Below 5 °C, preheating when you press the start key. Cold engine: engine speed and ramp limited until it warms up (ADS temperature when installed).",
+      f9_t: "DashboardLive screens", f9_p: "Screens that used to read CVT Addon keep showing the ramp, the range and the lamps.",
+      inst_title: "Install",
+      inst_1: "Download <code>FS25_FlowDrive.zip</code> from the <a href=\"https://github.com/DEV-Velris/FlowDrive/releases/latest\">Releases</a> page.",
+      inst_2: "<strong>With the game closed</strong>, copy the zip into <code>Documents\\My Games\\FarmingSimulator2025\\mods</code>. Do not rename it: the game identifies a mod by this name.",
+      inst_3: "In your savegame's mod selection, tick FlowDrive and untick CVT Addon if it is there.",
+      inst_4: "In game, inside a vehicle: <kbd>Left Shift</kbd> + <kbd>Left Alt</kbd> + <kbd>T</kbd> opens the FlowDrive menu. The other functions can be bound in <em>Options → Controls</em>.",
+      boost_title: "Boost setup assistant",
+      boost_sub: "The boost is off by default. To set it, compare the tractor's power in the game with its real spec sheet. Fill in the form: an AI will do the research with the right method.",
+      s1_t: "Boost: off or %", s1_p: "The extra power, 1 to 30 %. Active on the road above 16 km/h and with the PTO.",
+      s2_t: "Game power: included", s2_p: "The game power is already the boosted power. FlowDrive lowers it when the boost does not apply.",
+      s3_t: "Game power: added", s3_p: "The game power is the power without boost. FlowDrive adds the boost when it applies.",
+      l_brand: "Brand", l_model: "Model", l_hp: "Power in the game (hp)",
+      l_hp_hint: "Shown in the FlowDrive menu, \"Game power (… hp)\" row.",
+      l_src: "Mod or pack (optional)", l_src_hint: "Base game, or the name of the mod that adds the tractor.",
+      btn_prepare: "Prepare the question", l_prompt: "Question for the AI",
+      ai_google: "Google (AI Mode)", btn_copy: "Copy the question",
+      ai_warn: "<strong>An AI answer is an estimate.</strong> Check the figures on the manufacturer's spec sheet before using them. If the AI finds no reliable figures, leave the boost off.",
+      ver_title: "Vehicles already checked",
+      ver_sub: "Settings based on manufacturer spec sheets and published tests. Details and sources in BOOST.md.",
+      th_machine: "Vehicle", th_game: "In game", th_real: "Real", th_setting: "FlowDrive setting",
+      r1_real: "165 hp / 680 Nm; Sigma Power 201 hp / 800 Nm", r1_set: "18 %, included",
+      r2_real: "114 hp; DynamicPerformance 124 hp", r2_set: "9 %, added",
+      r3_real: "305 hp constant, no boost", r4_real: "420 hp constant (the only S without boost)",
+      r5_real: "543 hp rated, 617 hp max", r6_real: "no boost", off: "Off",
+      foot_by: "FlowDrive, by Velris", foot_repo: "GitHub repository", foot_boost: "Boost guide (BOOST.md)",
+      foot_changes: "Changelog", foot_issues: "Report a problem",
+      err_required: "Required.", err_hp: "Enter a number between 20 and 2000.",
+      copied: "Copied.", copy_fail: "Select the text and copy it by hand.",
+      prompt_placeholder: "Fill in the form, then click \"Prepare the question\"."
+    }
+  };
+
+  // French texts are read from the page itself, so the HTML stays the single French source.
+  T.fr = {};
+  document.querySelectorAll("[data-i18n]").forEach(function (el) { T.fr[el.getAttribute("data-i18n")] = el.textContent; });
+  document.querySelectorAll("[data-i18n-html]").forEach(function (el) { T.fr[el.getAttribute("data-i18n-html")] = el.innerHTML; });
+  T.fr.err_required = "Obligatoire.";
+  T.fr.err_hp = "Entrez un nombre entre 20 et 2000.";
+  T.fr.copied = "Copié.";
+  T.fr.copy_fail = "Sélectionnez le texte et copiez-le à la main.";
+  T.fr.prompt_placeholder = "Remplissez le formulaire, puis cliquez sur « Préparer la question ».";
+
+  function buildPrompt(lang, d) {
+    var machine = d.brand + " " + d.model + (d.source ? " (" + d.source + ")" : "");
+    if (lang === "en") {
+      return [
+        "I play Farming Simulator 25 with the FlowDrive mod. Help me set its boost for: " + machine + ", power in the game: " + d.hp + " hp.",
+        "Method (details: " + BOOST_DOC + "):",
+        "1. Find the real spec sheet: power and torque without boost, with boost, and when the boost applies.",
+        "2. No real boost -> Boost off.",
+        "3. Game power close to the boosted power -> \"included\"; close to the power without boost -> \"added\".",
+        "4. % = (boost torque - base torque) / base torque x 100 (otherwise with power), rounded, between 1 and 30.",
+        "Answer with: Boost (off or %), Game power (included / added), the calculation in one line, your sources. If you find no reliable figures, say so and recommend off. Never invent a boost."
+      ].join("\n");
+    }
+    return [
+      "Je joue à Farming Simulator 25 avec le mod FlowDrive. Aide-moi à régler son boost pour : " + machine + ", puissance dans le jeu : " + d.hp + " ch.",
+      "Méthode (détails : " + BOOST_DOC + ") :",
+      "1. Cherche la fiche réelle : puissance et couple sans boost, avec boost, et quand le boost s'applique.",
+      "2. Pas de boost réel -> Boost désactivé.",
+      "3. Puissance du jeu proche de la puissance boostée -> « inclus » ; proche de la puissance sans boost -> « en plus ».",
+      "4. % = (couple boost - couple base) / couple base x 100 (sinon avec la puissance), arrondi, entre 1 et 30.",
+      "Réponds avec : Boost (désactivé ou %), Puissance du jeu (inclus / en plus), le calcul en une ligne, tes sources. Si tu ne trouves pas de chiffres fiables, dis-le et conseille désactivé. N'invente jamais de boost."
+    ].join("\n");
+  }
+
+  var AI_URLS = {
+    google: "https://www.google.com/search?udm=50&q=",
+    chatgpt: "https://chatgpt.com/?q=",
+    claude: "https://claude.ai/new?q=",
+    perplexity: "https://www.perplexity.ai/search?q="
+  };
+
+  var lang = "fr";
+  var lastData = null;
+  var form = document.getElementById("boostForm");
+  var promptBox = document.getElementById("prompt");
+  var aiButtons = document.querySelectorAll("[data-ai]");
+  var copyBtn = document.getElementById("copyBtn");
+  var copyStatus = document.getElementById("copyStatus");
+
+  function t(key) { return (T[lang] && T[lang][key]) || T.fr[key] || ""; }
+
+  function applyLang(next) {
+    lang = next === "en" ? "en" : "fr";
+    document.documentElement.lang = lang;
+    document.title = lang === "en" ? "FlowDrive for FS25" : "FlowDrive pour FS25";
+    document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
+    document.querySelectorAll("[data-i18n-html]").forEach(function (el) { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+    document.querySelectorAll("[data-set-lang]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-set-lang") === lang ? "true" : "false");
+    });
+    promptBox.placeholder = t("prompt_placeholder");
+    if (lastData) { promptBox.value = buildPrompt(lang, lastData); }
+    ["brandErr", "modelErr", "hpErr"].forEach(function (id) { document.getElementById(id).textContent = ""; });
+    copyStatus.textContent = "";
+    try { localStorage.setItem("flowdrive-lang", lang); } catch (e) { /* storage unavailable */ }
+  }
+
+  function validate() {
+    var ok = true;
+    var brand = document.getElementById("brand");
+    var model = document.getElementById("model");
+    var hp = document.getElementById("hp");
+    [[brand, "brandErr"], [model, "modelErr"]].forEach(function (pair) {
+      var empty = pair[0].value.trim() === "";
+      pair[0].setAttribute("aria-invalid", empty ? "true" : "false");
+      document.getElementById(pair[1]).textContent = empty ? t("err_required") : "";
+      if (empty) { ok = false; }
+    });
+    var hpValue = Number(hp.value);
+    var hpBad = hp.value.trim() === "" || !isFinite(hpValue) || hpValue < 20 || hpValue > 2000;
+    hp.setAttribute("aria-invalid", hpBad ? "true" : "false");
+    document.getElementById("hpErr").textContent = hpBad ? (hp.value.trim() === "" ? t("err_required") : t("err_hp")) : "";
+    if (hpBad) { ok = false; }
+    if (!ok) { return null; }
+    return {
+      brand: brand.value.trim(),
+      model: model.value.trim(),
+      hp: Math.round(hpValue),
+      source: document.getElementById("source").value.trim()
+    };
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var data = validate();
+    if (!data) { return; }
+    lastData = data;
+    promptBox.value = buildPrompt(lang, data);
+    aiButtons.forEach(function (b) { b.disabled = false; });
+    copyBtn.disabled = false;
+    copyStatus.textContent = "";
+  });
+
+  aiButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      if (!promptBox.value) { return; }
+      var url = AI_URLS[button.getAttribute("data-ai")] + encodeURIComponent(promptBox.value);
+      window.open(url, "_blank", "noopener");
+    });
+  });
+
+  copyBtn.addEventListener("click", function () {
+    var text = promptBox.value;
+    function fallback() {
+      promptBox.focus();
+      promptBox.select();
+      var done = false;
+      try { done = document.execCommand("copy"); } catch (e) { done = false; }
+      copyStatus.textContent = done ? t("copied") : t("copy_fail");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { copyStatus.textContent = t("copied"); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  document.querySelectorAll("[data-set-lang]").forEach(function (b) {
+    b.addEventListener("click", function () { applyLang(b.getAttribute("data-set-lang")); });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem("flowdrive-lang"); } catch (e) { saved = null; }
+  var browser = (navigator.language || "fr").toLowerCase().indexOf("fr") === 0 ? "fr" : "en";
+  applyLang(saved || browser);
+})();
+</script>
+</body>
+</html>

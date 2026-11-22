@@ -4,6 +4,7 @@
 
 A mod for **Farming Simulator 25** that gives continuously variable (CVT) and hydrostatic (HST) transmissions realistic behaviour. It works on every eligible vehicle, with nothing to buy or configure.
 
+- Website and boost assistant: **https://dev-velris.github.io/FlowDrive/**
 - Version: **1.0.2.0** ([changelog](CHANGELOG.md))
 - Single player only (multiplayer is planned for 1.1).
 - **Do not use together with CVT Addon.** Both change the same things. When CVT Addon is active on a vehicle, FlowDrive does nothing on it.
@@ -40,7 +41,7 @@ Per-vehicle settings are stored in the savegame. General settings go to `modSett
 
 ## Which boost to set?
 
-The boost is **off by default**. The menu shows the vehicle's power in the game on the "Game power (… hp)" row. Compare it with the real tractor's spec sheet. The decision rule and the vehicles already checked are in [docs/BOOST.md](docs/BOOST.md) (in French). That document is written to be read by an AI as well: give it the link, the brand, the model and the game power.
+The boost is **off by default**. The menu shows the vehicle's power in the game on the "Game power (… hp)" row. Compare it with the real tractor's spec sheet. The decision rule and the vehicles already checked are in [docs/BOOST.md](docs/BOOST.md) (in French). The [boost assistant](https://dev-velris.github.io/FlowDrive/#boost) prepares the question for an AI (Google AI Mode, ChatGPT, Claude, Perplexity) from the brand, the model and the game power.
 
 ## Tested compatibility
 
@@ -55,7 +56,7 @@ The boost is **off by default**. The menu shows the vehicle's power in the game 
 | Folder | Content |
 |---|---|
 | `FS25_FlowDrive/` | the mod, as it is zipped |
-| `docs/` | detailed behaviour, boost guide (in French) |
+| `docs/` | website (`index.html`, published with GitHub Pages), detailed behaviour, boost guide (in French) |
 | `tools/` | `build.ps1` (builds the zip), `luacheck_blocks.js` (checks the structure of the Lua files) |
 
 ## Building the zip
