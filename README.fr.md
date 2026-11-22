@@ -41,7 +41,7 @@ Les réglages par machine sont enregistrés dans la sauvegarde. Les réglages g�
 
 ## Quel boost régler ?
 
-Le boost est **désactivé par défaut**. Le menu affiche la puissance de la machine dans le jeu, sur la ligne « Puissance du jeu (… ch) ». Il suffit de la comparer à la fiche réelle du tracteur. La règle de décision et les machines déjà vérifiées sont dans [docs/BOOST.md](docs/BOOST.md). L'[assistant boost](https://dev-velris.github.io/FlowDrive/#boost) prépare la question pour une IA (Google mode IA, ChatGPT, Claude, Perplexity) à partir de la marque, du modèle et de la puissance du jeu.
+Le boost est **désactivé par défaut**. Le menu affiche la puissance de la machine dans le jeu, sur la ligne « Puissance du jeu (… ch) ». Il suffit de la comparer à la fiche réelle du tracteur. La règle de décision est dans [docs/BOOST.md](docs/BOOST.md). L'[assistant boost](https://dev-velris.github.io/FlowDrive/#boost) prépare la question pour une IA (Google mode IA, ChatGPT, Claude, Perplexity) à partir de la marque, du modèle et de la puissance du jeu.
 
 ## Compatibilité testée
 

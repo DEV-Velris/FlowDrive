@@ -41,7 +41,7 @@ Per-vehicle settings are stored in the savegame. General settings go to `modSett
 
 ## Which boost to set?
 
-The boost is **off by default**. The menu shows the vehicle's power in the game on the "Game power (… hp)" row. Compare it with the real tractor's spec sheet. The decision rule and the vehicles already checked are in [docs/BOOST.md](docs/BOOST.md) (in French). The [boost assistant](https://dev-velris.github.io/FlowDrive/#boost) prepares the question for an AI (Google AI Mode, ChatGPT, Claude, Perplexity) from the brand, the model and the game power.
+The boost is **off by default**. The menu shows the vehicle's power in the game on the "Game power (… hp)" row. Compare it with the real tractor's spec sheet. The decision rule is in [docs/BOOST.md](docs/BOOST.md) (in French). The [boost assistant](https://dev-velris.github.io/FlowDrive/#boost) prepares the question for an AI (Google AI Mode, ChatGPT, Claude, Perplexity) from the brand, the model and the game power.
 
 ## Tested compatibility
 
