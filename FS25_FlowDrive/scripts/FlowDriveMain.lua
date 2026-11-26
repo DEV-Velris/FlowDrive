@@ -13,7 +13,7 @@
 FlowDrive = FlowDrive or {}
 FlowDrive.MOD_NAME = g_currentModName
 FlowDrive.MOD_DIR = g_currentModDirectory
-FlowDrive.VERSION = "1.1.0.0"
+FlowDrive.VERSION = "1.2.0.0"
 FlowDrive.SPEC_NAME = "flowDrive"
 
 -- Ramps: maximum acceleration (m/s2), share of engine speed rise,
@@ -145,8 +145,10 @@ function FlowDrive.tf(key, ...)
 end
 
 -- General settings, shared by all vehicles and all savegames
-FlowDrive.settings = {hydraulic = true, preheat = true, coldProtect = true, hud = true, hudPos = 1, dbl = true}
-FlowDrive.SETTINGS_BOOLS = {"hydraulic", "preheat", "coldProtect", "hud", "dbl"}
+-- 1.2.0: gearLoad / gearCoast / gearGroups: aids of the fixed-gear boxes (FlowDriveGears.lua)
+FlowDrive.settings = {hydraulic = true, preheat = true, coldProtect = true, hud = true, hudPos = 1, dbl = true,
+    gearLoad = true, gearCoast = true, gearGroups = true}
+FlowDrive.SETTINGS_BOOLS = {"hydraulic", "preheat", "coldProtect", "hud", "dbl", "gearLoad", "gearCoast", "gearGroups"}
 
 function FlowDrive.getSettingsPath()
     if getUserProfileAppPath == nil then
@@ -208,7 +210,7 @@ pcall(FlowDrive.loadSettings)
 
 FlowDrive.SYNC_INTERVAL = 250          -- ms: the server checks at most this often whether the display state changed
 -- General settings that act on the driving law: in multiplayer, those of the server apply to everyone
-FlowDrive.SERVER_RULES = {"hydraulic", "preheat", "coldProtect"}
+FlowDrive.SERVER_RULES = {"hydraulic", "preheat", "coldProtect", "gearLoad", "gearCoast", "gearGroups"}
 FlowDrive.serverRules = nil            -- received from the server (player who is not the server)
 
 function FlowDrive.isMultiplayer()
@@ -384,6 +386,12 @@ if not FlowDrive.hooksInstalled then
     installMotorHook("getMotorRotationAccelerationLimit", FlowDrive.hookMotorRotationAccelerationLimit)
     installMotorHook("getRequiredMotorRpmRange", FlowDrive.hookRequiredMotorRpmRange)
     installMotorHook("getTorqueCurveValue", FlowDrive.hookTorqueCurveValue)
+    -- 1.2.0: gear choice of boxes with fixed gears (FlowDriveGears.lua). Only the server runs it.
+    if FlowDriveGears ~= nil then
+        installMotorHook("findGearChangeTargetGearPrediction", FlowDriveGears.hookFindGear)
+    else
+        print("[FlowDrive] ATTENTION : FlowDriveGears.lua non charge, rapports automatiques inactifs")
+    end
     -- 1.0.1: start key (Enter): starts preheating when it is cold. Replaced before vehicles are loaded,
     -- so ADS, which calls Motorized.actionEventToggleMotorState again, sees it too.
     local function wrapStartAction(name)

@@ -1,4 +1,4 @@
-# FlowDrive : fonctionnement détaillé (1.1)
+# FlowDrive : fonctionnement détaillé (1.2)
 
 ## Principe
 
@@ -35,7 +35,36 @@ Là où le jeu ne passe pas par ces fonctions, FlowDrive écrit directement les 
 | `hst` | chargeuses, télescopiques, compactes, chariots, mélangeuses automotrices | 60 % | ×1,5 | travail, 50 % |
 | `harvester` | moissonneuses | 60 % (100 % en battage) | ×1,5 | récolte, 40 %, automatique en battage |
 
-Les régimes sont donnés en part de la plage ralenti → nominal. Les boîtes manuelles, l'électrique et les locomotives restent au jeu. Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
+Les régimes sont donnés en part de la plage ralenti → nominal. L'électrique et les locomotives restent au jeu. Les boîtes à rapports fixes ont un traitement à part (section suivante). Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
+
+## Boîtes à rapports fixes (1.2)
+
+Fichier `scripts/FlowDriveGears.lua`. Le jeu choisit le rapport dans `VehicleMotor:findGearChangeTargetGearPrediction` ; ses constantes de score sont locales à la fonction. FlowDrive appelle donc la fonction d'origine (et celles des autres mods), puis corrige le rapport renvoyé.
+
+**Détection (lue dans le moteur, pas devinée) :** boîte continue si `minForwardGearRatio` existe, à rapports si `forwardGears` existe ; type de rapports et de gammes (`gearType`, `groupType`), passage manuel possible (`manualShiftGears`, `manualShiftGroups`). Résultat dans le log au chargement (`boite : …`).
+
+**Quand FlowDrive agit :** rapports fixes, moteur non électrique, FlowDrive actif sur la machine, et `motor:getUseAutomaticGearShifting()` vrai (réglage de boîte du joueur sur automatique, ou véhicule qui ne se passe pas à la main). Si le joueur passe les rapports à la main, FlowDrive ne fait rien. Les gammes ne sont pas encore traitées. Côté serveur seulement.
+
+**Rétrogradation sous charge :** si la charge moteur lissée reste au-dessus de 85 % pendant 0,8 s, accélérateur enfoncé, vitesse au-dessus de 2 km/h, et que le régime est sous celui qui garde 85 % de la puissance maxi, FlowDrive passe au rapport inférieur à condition que :
+- le régime après passage reste sous ralenti + 82 % de la plage ;
+- la puissance au nouveau régime soit au moins 5 % plus haute.
+
+Après cette rétrogradation, la montée de rapport demandée par le jeu est refusée pendant 4 s, sauf au-dessus de ralenti + 92 % de la plage (pas de va-et-vient). Un seul rapport à la fois.
+
+**Garde à la montée (anti va-et-vient) :** le jeu accepte des rapports qui ne donnent que 50 % de la puissance maxi, et peut monter de plusieurs rapports d'un coup ; le moteur peine alors, FlowDrive voudrait redescendre, et ça recommence. Quand la charge lissée dépasse 50 % et que l'accélérateur est enfoncé, FlowDrive calcule la charge que le moteur aurait après la montée (charge actuelle × puissance actuelle / puissance au nouveau régime). Si elle dépasse 80 % (sous le seuil de 85 % de la rétrogradation, donc sans va-et-vient), la montée est refusée ou réduite au rapport le plus haut qui passe. Réglage : « rétrograder sous charge ».
+
+**Délai du jeu :** après une montée de rapport du jeu, le moteur de jeu annule pendant 3 s toute rétrogradation demandée à l'accélération (`allowGearChangeTimer`). FlowDrive ne la demande pas pendant ce délai (sinon la demande est perdue et loguée pour rien) et la fait dès qu'il est écoulé.
+
+**Frein moteur (pied levé) :** accélérateur sous 5 % depuis 0,6 s, au-dessus de 6 km/h : rétrogradation si le régime est sous ralenti + 30 % de la plage (jusqu'à + 50 % avec une charge attelée lourde, même facteur de masse que le frein moteur des CVT) et que le régime après passage reste sous ralenti + 75 %. Deux rétrogradations de frein moteur de suite sont séparées d'au moins 1,5 s. La montée de rapport est alors refusée 2 s, sauf si le conducteur réaccélère. Le jeu ne rétrograde pied levé que sous 25 % de la plage (`findGearChangeTargetGearPrediction` donne un score nul aux rapports inférieurs au-dessus).
+
+**Gammes automatiques** (`getUseAutomaticGroupShifting()`, gamme non verrouillée) :
+- *montée :* au dernier rapport de la gamme, accélérateur enfoncé, régime à ralenti + 90 % de la plage (le jeu attend maxi − 50 tr/min). FlowDrive choisit dans la gamme suivante le rapport qui donne le plus de puissance sous ralenti + 82 %, à condition que le moteur reste sous 80 % de charge après le passage. Le changement se fait avec `VehicleMotor:setGearGroup`, comme le jeu ;
+- *descente :* au rapport 1 de la gamme, même condition de charge que la rétrogradation, on prend dans la gamme inférieure le plus grand rapport qui donne au moins 5 % de puissance en plus sous ralenti + 82 % ;
+- 4 s minimum entre deux changements de gamme ; pas de changement de gamme entre marche avant et arrière.
+
+Réglages généraux (menu, ceux de l'hôte en multijoueur) : « rétrograder sous charge », « frein moteur », « gammes automatiques ».
+
+**Ce que le jeu fait déjà (lu dans `updateGear`)** : après un changement de rapport, il interdit 3 s une rétrogradation à l'accélération si le dernier passage était une montée (`allowGearChangeTimer`). La rétrogradation sous charge de FlowDrive passe donc après ce délai.
 
 ## Loi de conduite
 

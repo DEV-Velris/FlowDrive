@@ -54,6 +54,12 @@
         <text name="fd_opt_hudPos_tt" text="À droite : au-dessus du compteur. À gauche : au-dessus de la carte."/>
         <text name="fd_opt_dbl" text="Écrans DashboardLive"/>
         <text name="fd_opt_dbl_tt" text="Fournit la rampe, la gamme et les voyants aux écrans qui lisaient CVT Addon."/>
+        <text name="fd_opt_gearLoad" text="Boîtes à rapports : rétrograder sous charge"/>
+        <text name="fd_opt_gearLoad_tt" text="Boîtes à rapports en automatique : le rapport inférieur est pris quand le moteur peine sous charge."/>
+        <text name="fd_opt_gearCoast" text="Boîtes à rapports : frein moteur"/>
+        <text name="fd_opt_gearCoast_tt" text="Pied levé, la boîte rétrograde plus tôt pour freiner avec le moteur (davantage avec une charge lourde)."/>
+        <text name="fd_opt_gearGroups" text="Boîtes à rapports : gammes automatiques"/>
+        <text name="fd_opt_gearGroups_tt" text="Gammes en automatique : montée avant le régime maxi, descente sous charge."/>
         <text name="fd_not_available" text="Non disponible sur ce véhicule : %s"/>
         <text name="fd_yes" text="Oui"/>
         <text name="fd_no" text="Non"/>
@@ -80,6 +86,11 @@
         <text name="fd_reason_noCvt" text="boîte à rapports"/>
         <text name="fd_reason_electric" text="moteur électrique, laissé au jeu"/>
         <text name="fd_reason_category" text="catégorie %s non gérée"/>
+
+        <!-- 1.2.0: boîtes à rapports fixes -->
+        <text name="fd_gear_auto" text="Boîte à rapports : rapports automatiques actifs (rétrogradation sous charge)."/>
+        <text name="fd_gear_manual" text="Boîte à rapports : passage manuel (réglage du jeu), FlowDrive n'intervient pas."/>
+        <text name="fd_gear_off" text="Boîte à rapports : FlowDrive coupé, conduite du jeu de base."/>
 
         <!-- Messages -->
         <text name="fd_msg_notAvailable" text="FlowDrive : non disponible sur ce véhicule (%s)"/>

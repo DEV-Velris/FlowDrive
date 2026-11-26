@@ -5,7 +5,7 @@
 Mod pour **Farming Simulator 25** : un comportement réaliste des boîtes à variation continue (CVT) et hydrostatiques (HST). Il s'applique à toutes les machines compatibles, sans rien à acheter ni à configurer.
 
 - Site et assistant boost : **https://dev-velris.github.io/FlowDrive/**
-- Version : **1.1.0.0** ([historique des versions](CHANGELOG.fr.md))
+- Version : **1.2.0.0** ([historique des versions](CHANGELOG.fr.md))
 - Solo et **multijoueur (expérimental depuis la 1.1)**. En multijoueur, le serveur calcule la boîte ; l'hydraulique, le préchauffage et la protection froid suivent les réglages de l'hôte. Merci de [signaler tout problème](https://github.com/DEV-Velris/FlowDrive/issues/new/choose).
 - **Ne pas utiliser avec CVT Addon.** Les deux modifient la même chose. Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
 
@@ -16,9 +16,10 @@ Mod pour **Farming Simulator 25** : un comportement réaliste des boîtes à var
 | Tracteurs (CVT) | Rampes d'accélération (Auto ou 1 à 4) ; régime éco ; limite de charge ; gammes champ et route ; frein moteur adapté au poids attelé ; PdF éco ; régimes mémorisés ; boost réglable |
 | Chargeuses, télescopiques, automotrices (HST) | Régime hydraulique automatique quand un vérin bouge ; gamme travail ; approche lente |
 | Moissonneuses | Gammes récolte et route (récolte automatique en battage) ; débit auto (la vitesse baisse quand le moteur sature) |
+| Boîtes à rapports fixes (powershift, semi-powershift, manuelles en automatique) | Rétrogradation sous charge ; garde à la montée (pas de va-et-vient) ; frein moteur pied levé ; gammes automatiques. Seulement quand le jeu passe lui-même les rapports : un joueur qui passe à la main n'est jamais touché |
 | Toutes | Préchauffage à la touche de démarrage par temps froid ; protection moteur froid ; écrans DashboardLive qui lisaient CVT Addon |
 
-Les boîtes manuelles, les machines électriques et les locomotives restent gérées par le jeu.
+Les machines électriques et les locomotives restent gérées par le jeu, ainsi que les boîtes que tu passes à la main.
 
 Le fonctionnement détaillé est dans [docs/FONCTIONNEMENT.md](docs/FONCTIONNEMENT.md).
 

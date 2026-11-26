@@ -195,6 +195,12 @@ function FlowDriveSpec:onLoad(savegame)
     s.inchSent = false
     s.hydSent = false
     s.hydClientHold = 0
+    -- 1.2.0: fixed-gear boxes (FlowDriveGears.lua): the engine's own facts, and the downshift state
+    s.gearInfo = nil
+    s.gearEligible = false
+    s.gear = {load = 0, highTime = 0, coastTime = 0, noUpUntil = 0, noUpCoast = false, groupHoldUntil = 0,
+        downshifts = 0, coastShifts = 0, groupShifts = 0, upVetoes = 0, upGuards = 0, guardLogAt = 0,
+        lastGear = nil, ownTarget = nil}
 end
 
 ------------------------------------------------------------------------------------------
@@ -535,6 +541,7 @@ function FlowDriveSpec:onPostLoad(savegame)
         s.flowEnabled = savegame.xmlFile:getValue(key .. "#flow", true) ~= false
     end
     FlowDriveSpec.checkEligible(self)
+    FlowDriveGears.logDetection(self, s)
 end
 
 function FlowDriveSpec:saveToXMLFile(xmlFile, key, usedModNames)
@@ -582,14 +589,18 @@ function FlowDriveSpec.checkEligible(vehicle)
         s.reasonKey = "fd_reason_noMotor"
         return
     end
+    -- 1.2.0: what the engine says about the gearbox (read, not guessed). A box with fixed gears is not
+    -- eligible for the CVT features, but FlowDriveGears can act on it (automatic downshift under load).
+    s.gearInfo = FlowDriveGears.detect(motor)
+    s.gearEligible = false
     if motor.minForwardGearRatio == nil then
         s.reason = "pas une boite CVT"
         s.reasonKey = "fd_reason_noCvt"
+        s.gearEligible = s.gearInfo.kind == "discrete" and not FlowDriveGears.isElectric(vehicle)
         return
     end
     -- 0.3.0: electric motor left to the game (no diesel but an electric charge)
-    local consumers = motorized.consumersByFillTypeName
-    if type(consumers) == "table" and consumers.DIESEL == nil and consumers.ELECTRICCHARGE ~= nil then
+    if FlowDriveGears.isElectric(vehicle) then
         s.reason = "moteur electrique (laisse au jeu)"
         s.reasonKey = "fd_reason_electric"
         return
@@ -981,7 +992,8 @@ end
 -- Display state computed by the server: what the HUD, DashboardLive and the messages need.
 -- Values are rounded so that small variations do not resend it.
 local NET_KEYS = {"rampAuto", "rangeActive", "cold", "boost", "pto", "ptoRpm", "fixedRpm", "flowSpeed", "droop",
-    "inch", "hyd", "engineTemp", "preheat", "ruleHydraulic", "rulePreheat", "ruleCold"}
+    "inch", "hyd", "engineTemp", "preheat", "ruleHydraulic", "rulePreheat", "ruleCold",
+    "ruleGearLoad", "ruleGearCoast", "ruleGearGroups"}
 
 function FlowDriveSpec.buildNetState(s)
     local pto = s.work == "pto" and s.requiredMinRpm ~= nil
@@ -1001,7 +1013,10 @@ function FlowDriveSpec.buildNetState(s)
         preheat = s.preheatTimer > 0 and clamp(math.ceil(s.preheatTimer / 100), 1, 255) or 0,
         ruleHydraulic = FlowDrive.settings.hydraulic == true,
         rulePreheat = FlowDrive.settings.preheat == true,
-        ruleCold = FlowDrive.settings.coldProtect == true
+        ruleCold = FlowDrive.settings.coldProtect == true,
+        ruleGearLoad = FlowDrive.settings.gearLoad ~= false,
+        ruleGearCoast = FlowDrive.settings.gearCoast ~= false,
+        ruleGearGroups = FlowDrive.settings.gearGroups ~= false
     }
 end
 
@@ -1036,6 +1051,9 @@ function FlowDriveSpec.writeNetState(streamId, n)
     streamWriteBool(streamId, n.ruleHydraulic)
     streamWriteBool(streamId, n.rulePreheat)
     streamWriteBool(streamId, n.ruleCold)
+    streamWriteBool(streamId, n.ruleGearLoad)
+    streamWriteBool(streamId, n.ruleGearCoast)
+    streamWriteBool(streamId, n.ruleGearGroups)
 end
 
 function FlowDriveSpec.readNetState(streamId)
@@ -1058,6 +1076,9 @@ function FlowDriveSpec.readNetState(streamId)
     n.ruleHydraulic = streamReadBool(streamId)
     n.rulePreheat = streamReadBool(streamId)
     n.ruleCold = streamReadBool(streamId)
+    n.ruleGearLoad = streamReadBool(streamId)
+    n.ruleGearCoast = streamReadBool(streamId)
+    n.ruleGearGroups = streamReadBool(streamId)
     return n
 end
 
@@ -1070,7 +1091,8 @@ local function applyNetState(s, n)
     s.boostApplied = n.boost
     s.netEngineTemp = n.engineTemp
     s.netPreheat = n.preheat * 100
-    FlowDrive.serverRules = {hydraulic = n.ruleHydraulic, preheat = n.rulePreheat, coldProtect = n.ruleCold}
+    FlowDrive.serverRules = {hydraulic = n.ruleHydraulic, preheat = n.rulePreheat, coldProtect = n.ruleCold,
+        gearLoad = n.ruleGearLoad, gearCoast = n.ruleGearCoast, gearGroups = n.ruleGearGroups}
 end
 
 -- Server side: marks the vehicle for sending when its display state changed (at most every SYNC_INTERVAL)
@@ -1810,7 +1832,7 @@ function FlowDriveSpec.actionToggle(self, actionName, inputValue, callbackState,
     if s == nil then
         return
     end
-    if not s.eligible then
+    if not s.eligible and not s.gearEligible then
         notify(self, FlowDrive.tf("fd_msg_notAvailable", FlowDriveSpec.getReasonText(s)))
         return
     end
