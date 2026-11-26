@@ -34,6 +34,12 @@ G.HEADROOM = 0.82        -- after the downshift, engine speed stays under idle +
 G.UP_HOLD = 4000         -- ms: after our downshift the game's upshift is refused (anti hunting)...
 G.UP_HOLD_RPM = 0.92     -- ... unless engine speed is above idle + this share of the range
 G.CURVE_STEP = 50        -- rpm: step used to read the torque curve
+-- Upshift guard: the game accepts gears that give only 50 % of the peak power and may jump several gears,
+-- so it climbs into a gear where the engine lugs, then goes back down, and so on. FlowDrive refuses an
+-- upshift when the load the engine would have to carry after it is too high.
+G.UPSHIFT_CHECK_LOAD = 0.50  -- smoothed load from which the guard looks at the upshift
+G.UPSHIFT_LOAD_MAX = 0.80    -- predicted load after the upshift above which it is refused (under LOAD_HIGH: no hunting)
+G.GUARD_LOG_INTERVAL = 2000  -- ms between two log lines of the guard
 
 -- Engine braking (pedal released)
 G.COAST_PEDAL = 0.05     -- accelerator share counted as "released"
@@ -291,6 +297,13 @@ local function adjustGroups(motor, s, g, curve, curGear, gears, pedal, speed, di
     return bestGear
 end
 
+-- The engine cancels a downshift requested under acceleration for 3 s after one of its upshifts
+-- (updateGear: allowGearChangeTimer / allowGearChangeDirection). Asking during that time only wastes the request.
+function G.gameBlocksDownshift(motor, pedal)
+    return (motor.allowGearChangeTimer or 0) > 0 and (motor.allowGearChangeDirection or 0) ~= -1
+        and pedal > 0 and (motor.currentDirection or 1) > 0
+end
+
 -- Returns the gear to use. Never raises: an error leaves the game's choice untouched.
 function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt)
     local vehicle = motor.vehicle
@@ -372,6 +385,32 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
         return newGear
     end
 
+    if newGear > curGear and cfg.gearLoad ~= false and pedal >= G.MIN_PEDAL and g.load >= G.UPSHIFT_CHECK_LOAD then
+        -- upshift guard: keep the highest gear the engine can carry after the shift
+        local curPower = powerAt(motor, curRpm)
+        if curPower ~= nil then
+            local k = newGear
+            while k > curGear do
+                local rpm = diffRpm * math.abs(gears[k].ratio * mult)
+                local power = powerAt(motor, rpm)
+                if power ~= nil and rpm >= curve.idle and curPower * g.load / math.max(power, 0.0001) <= G.UPSHIFT_LOAD_MAX then
+                    break
+                end
+                k = k - 1
+            end
+            if k < newGear then
+                g.upGuards = g.upGuards + 1
+                if s.debug and (g_time or 0) >= g.guardLogAt then
+                    g.guardLogAt = (g_time or 0) + G.GUARD_LOG_INTERVAL
+                    print(string.format("%s rapports : %s | FlowDrive refuse la montee %d -> %d (garde %d) | charge %.2f regime %d vitesse %.1f km/h",
+                        FlowDrive.logPrefix(), tostring(vehicle.getFullName ~= nil and vehicle:getFullName() or "?"),
+                        curGear, newGear, k, g.load, curRpm, speed))
+                end
+                newGear = k
+            end
+        end
+    end
+
     if newGear ~= curGear then
         -- the game wants to shift. After our downshift, an upshift is refused while there is room
         -- (the engine speed rose, the load fell: the game would shift back up at once). After an
@@ -387,7 +426,7 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
 
     -- downshift under load
     if cfg.gearLoad ~= false and curGear > 1 and g.highTime >= G.LOAD_HOLD and speed >= G.MIN_SPEED
-        and gears[curGear - 1] ~= nil then
+        and gears[curGear - 1] ~= nil and not G.gameBlocksDownshift(motor, pedal) then
         local candRpm = diffRpm * math.abs(gears[curGear - 1].ratio * mult)
         if candRpm <= curve.idle + curve.range * G.HEADROOM then
             local curPower = powerAt(motor, curRpm)

@@ -51,6 +51,10 @@ Fichier `scripts/FlowDriveGears.lua`. Le jeu choisit le rapport dans `VehicleMot
 
 Après cette rétrogradation, la montée de rapport demandée par le jeu est refusée pendant 4 s, sauf au-dessus de ralenti + 92 % de la plage (pas de va-et-vient). Un seul rapport à la fois.
 
+**Garde à la montée (anti va-et-vient) :** le jeu accepte des rapports qui ne donnent que 50 % de la puissance maxi, et peut monter de plusieurs rapports d'un coup ; le moteur peine alors, FlowDrive voudrait redescendre, et ça recommence. Quand la charge lissée dépasse 50 % et que l'accélérateur est enfoncé, FlowDrive calcule la charge que le moteur aurait après la montée (charge actuelle × puissance actuelle / puissance au nouveau régime). Si elle dépasse 80 % (sous le seuil de 85 % de la rétrogradation, donc sans va-et-vient), la montée est refusée ou réduite au rapport le plus haut qui passe. Réglage : « rétrograder sous charge ».
+
+**Délai du jeu :** après une montée de rapport du jeu, le moteur de jeu annule pendant 3 s toute rétrogradation demandée à l'accélération (`allowGearChangeTimer`). FlowDrive ne la demande pas pendant ce délai (sinon la demande est perdue et loguée pour rien) et la fait dès qu'il est écoulé.
+
 **Frein moteur (pied levé) :** accélérateur sous 5 % depuis 0,6 s, au-dessus de 6 km/h : rétrogradation si le régime est sous ralenti + 30 % de la plage (jusqu'à + 50 % avec une charge attelée lourde, même facteur de masse que le frein moteur des CVT) et que le régime après passage reste sous ralenti + 75 %. La montée de rapport est alors refusée 2 s, sauf si le conducteur réaccélère. Le jeu ne rétrograde pied levé que sous 25 % de la plage (`findGearChangeTargetGearPrediction` donne un score nul aux rapports inférieurs au-dessus).
 
 **Gammes automatiques** (`getUseAutomaticGroupShifting()`, gamme non verrouillée) :

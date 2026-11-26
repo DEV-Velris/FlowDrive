@@ -199,7 +199,8 @@ function FlowDriveSpec:onLoad(savegame)
     s.gearInfo = nil
     s.gearEligible = false
     s.gear = {load = 0, highTime = 0, coastTime = 0, noUpUntil = 0, noUpCoast = false, groupHoldUntil = 0,
-        downshifts = 0, coastShifts = 0, groupShifts = 0, upVetoes = 0, lastGear = nil, ownTarget = nil}
+        downshifts = 0, coastShifts = 0, groupShifts = 0, upVetoes = 0, upGuards = 0, guardLogAt = 0,
+        lastGear = nil, ownTarget = nil}
 end
 
 ------------------------------------------------------------------------------------------
