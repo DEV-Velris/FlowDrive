@@ -2,7 +2,7 @@
 
 **English** · [Français](CHANGELOG.fr.md)
 
-## Unreleased
+## 1.2.0.0
 - **Fixed-gear gearboxes (powershift, semi-powershift, manual boxes used in automatic).** Automatic downshift under load. When the engine stays under heavy load below the engine speed that keeps 85 % of peak power, FlowDrive asks for the lower gear if it gives more power and leaves room before the rev limit. An upshift is refused for 4 s after this downshift (no hunting).
 - FlowDrive only acts when the game itself shifts the gears (gearbox setting on automatic, or a vehicle that cannot be shifted by hand). A player who shifts by hand is never touched.
 - **Upshift guard.** The game accepts gears that give only 50 % of peak power and can jump several gears, so under load it climbs into a gear where the engine lugs, then goes back down. FlowDrive now refuses (or reduces) an upshift when the engine would carry more than 80 % load after it. It also stops asking for a downshift during the 3 s the game itself cancels it after an upshift.

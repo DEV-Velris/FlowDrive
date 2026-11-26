@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <modDesc descVersion="114">
     <author>Velris</author>
-    <version>1.1.0.0</version>
+    <version>1.2.0.0</version>
     <title>
         <en>FlowDrive</en>
         <fr>FlowDrive</fr>
@@ -13,6 +13,7 @@
 - Eco PTO, engine speed memories (hand throttle), adjustable boost (percentage typed per vehicle, included in or added to the game power).
 - Loaders, telehandlers and self-propelled machines: automatic hydraulic engine speed.
 - Harvesters: harvest and road ranges, automatic crop flow control.
+- Fixed-gear gearboxes (powershift, semi-powershift): downshift under load, no gear hunting, engine braking, automatic gear groups. Only when the game shifts for you.
 - Automatic preheating and cold engine protection (uses Advanced Damage System temperatures when installed).
 - DashboardLive screens that used to read CVT Addon.
 
@@ -25,6 +26,7 @@ Do not use together with CVT Addon. Multiplayer: experimental (report problems o
 - Prise de force éco, régimes mémorisés (accélérateur à main), boost réglable (pourcentage saisi par machine, inclus dans la puissance du jeu ou en plus).
 - Chargeuses, télescopiques et automotrices : régime hydraulique automatique.
 - Moissonneuses : gammes récolte et route, débit auto.
+- Boîtes à rapports fixes (powershift, semi-powershift) : rétrogradation sous charge, pas de va-et-vient, frein moteur, gammes automatiques. Seulement quand le jeu passe les rapports pour vous.
 - Préchauffage automatique et protection moteur froid (utilise les températures d'Advanced Damage System s'il est présent).
 - Écrans DashboardLive qui lisaient CVT Addon.
 

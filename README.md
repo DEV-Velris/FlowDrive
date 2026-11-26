@@ -5,7 +5,7 @@
 A mod for **Farming Simulator 25** that gives continuously variable (CVT) and hydrostatic (HST) transmissions realistic behaviour. It works on every eligible vehicle, with nothing to buy or configure.
 
 - Website and boost assistant: **https://dev-velris.github.io/FlowDrive/**
-- Version: **1.1.0.0** ([changelog](CHANGELOG.md))
+- Version: **1.2.0.0** ([changelog](CHANGELOG.md))
 - Single player and **multiplayer (experimental since 1.1)**. In multiplayer, the server computes the transmission; hydraulics, preheating and cold protection follow the host's settings. Please [report any problem](https://github.com/DEV-Velris/FlowDrive/issues/new/choose).
 - **Do not use together with CVT Addon.** Both change the same things. When CVT Addon is active on a vehicle, FlowDrive does nothing on it.
 
@@ -16,9 +16,10 @@ A mod for **Farming Simulator 25** that gives continuously variable (CVT) and hy
 | Tractors (CVT) | Acceleration ramps (Auto or 1 to 4); eco engine speed; load limit; field and road ranges; engine braking adapted to the attached weight; eco PTO; engine speed memories; adjustable boost |
 | Loaders, telehandlers, self-propelled machines (HST) | Automatic hydraulic engine speed when a cylinder moves; work range; inching |
 | Harvesters | Harvest and road ranges (harvest range automatic while threshing); automatic crop flow (speed drops when the engine is overloaded) |
+| Fixed-gear gearboxes (powershift, semi-powershift, manual boxes in automatic) | Downshift under load; upshift guard (no hunting); engine braking with the pedal released; automatic gear groups (ranges). Only when the game itself shifts: a player who shifts by hand is never touched |
 | All | Preheating on the start key in cold weather; cold engine protection; DashboardLive screens that used to read CVT Addon |
 
-Manual gearboxes, electric vehicles and locomotives stay with the game.
+Electric vehicles and locomotives stay with the game, as do gearboxes you shift by hand.
 
 How it works in detail: [docs/FONCTIONNEMENT.md](docs/FONCTIONNEMENT.md) (in French).
 

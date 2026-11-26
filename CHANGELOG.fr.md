@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) · **Français**
 
-## Non publié
+## 1.2.0.0
 - **Boîtes à rapports fixes (powershift, semi-powershift, boîtes manuelles utilisées en automatique).** Rétrogradation automatique sous charge. Quand le moteur reste très chargé sous le régime qui garde 85 % de la puissance maxi, FlowDrive demande le rapport inférieur s'il donne plus de puissance et laisse de la marge avant le régime maxi. Une montée de rapport est refusée pendant 4 s après cette rétrogradation (pas de va-et-vient).
 - FlowDrive n'agit que si le jeu passe lui-même les rapports (réglage de boîte sur automatique, ou véhicule qui ne se passe pas à la main). Un joueur qui passe les rapports à la main n'est jamais touché.
 - **Garde à la montée.** Le jeu accepte des rapports qui ne donnent que 50 % de la puissance maxi et peut monter de plusieurs rapports d'un coup : sous charge, il monte dans un rapport où le moteur peine, puis redescend. FlowDrive refuse (ou réduit) maintenant une montée si le moteur dépasserait 80 % de charge après. Il ne demande plus non plus de rétrogradation pendant les 3 s où le jeu l'annule après une montée.

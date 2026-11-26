@@ -13,7 +13,7 @@
 FlowDrive = FlowDrive or {}
 FlowDrive.MOD_NAME = g_currentModName
 FlowDrive.MOD_DIR = g_currentModDirectory
-FlowDrive.VERSION = "1.1.0.0"
+FlowDrive.VERSION = "1.2.0.0"
 FlowDrive.SPEC_NAME = "flowDrive"
 
 -- Ramps: maximum acceleration (m/s2), share of engine speed rise,

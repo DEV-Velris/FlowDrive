@@ -1,4 +1,4 @@
-# FlowDrive : fonctionnement détaillé (1.1)
+# FlowDrive : fonctionnement détaillé (1.2)
 
 ## Principe
 
@@ -37,7 +37,7 @@ Là où le jeu ne passe pas par ces fonctions, FlowDrive écrit directement les 
 
 Les régimes sont donnés en part de la plage ralenti → nominal. L'électrique et les locomotives restent au jeu. Les boîtes à rapports fixes ont un traitement à part (section suivante). Si CVT Addon est actif sur une machine, FlowDrive ne fait rien sur celle-ci.
 
-## Boîtes à rapports fixes (non publié)
+## Boîtes à rapports fixes (1.2)
 
 Fichier `scripts/FlowDriveGears.lua`. Le jeu choisit le rapport dans `VehicleMotor:findGearChangeTargetGearPrediction` ; ses constantes de score sont locales à la fonction. FlowDrive appelle donc la fonction d'origine (et celles des autres mods), puis corrige le rapport renvoyé.
 
