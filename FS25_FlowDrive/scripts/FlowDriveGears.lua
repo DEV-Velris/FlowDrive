@@ -49,6 +49,7 @@ G.COAST_SHARE_MIN = 0.30 -- downshift when engine speed is under idle + this sha
 G.COAST_SHARE_MAX = 0.50 -- ... up to this share with a heavy attached load (same mass factor as the CVT engine braking)
 G.COAST_HEADROOM = 0.75  -- engine speed after the downshift stays under idle + this share of the range
 G.COAST_UP_HOLD = 2000   -- ms: upshift refused after an engine-braking downshift (pedal still released)
+G.COAST_REPEAT = 1500    -- ms between two engine-braking downshifts in a row (the first one waits COAST_TIME)
 
 -- Gear groups (ranges)
 G.GROUP_UP_RPM = 0.90    -- upshift of the group from the top gear when engine speed reaches idle + this share (game: max - 50 rpm)
@@ -206,16 +207,24 @@ local function logShift(vehicle, s, who, fromGear, toGear, load, rpm, speed, ext
     if not s.debug then
         return
     end
-    print(string.format("%s rapports : %s | %s %d -> %d | charge %.2f regime %d vitesse %.1f km/h%s",
+    local motorized = vehicle.spec_motorized
+    local motor = motorized ~= nil and motorized.motor or nil
+    local group = ""
+    if motor ~= nil and type(motor.gearGroups) == "table" and motor.activeGearGroupIndex ~= nil then
+        local entry = motor.gearGroups[motor.activeGearGroupIndex]
+        group = string.format(" | gamme %d/%d%s", motor.activeGearGroupIndex, #motor.gearGroups,
+            entry ~= nil and entry.name ~= nil and (" (" .. tostring(entry.name) .. ")") or "")
+    end
+    print(string.format("%s rapports : %s | %s %d -> %d | charge %.2f regime %.0f vitesse %.1f km/h%s%s",
         FlowDrive.logPrefix(), tostring(vehicle.getFullName ~= nil and vehicle:getFullName() or "?"),
-        who, fromGear, toGear, load, rpm, speed, extra or ""))
+        who, fromGear, toGear, load, rpm, speed, group, extra or ""))
 end
 
 local function logGroup(vehicle, s, fromGroup, toGroup, why, gear, load, rpm, speed, extra)
     if not s.debug then
         return
     end
-    print(string.format("%s gammes : %s | FlowDrive gamme %d -> %d (%s), rapport %d | charge %.2f regime %d vitesse %.1f km/h%s",
+    print(string.format("%s gammes : %s | FlowDrive gamme %d -> %d (%s), rapport %d | charge %.2f regime %.0f vitesse %.1f km/h%s",
         FlowDrive.logPrefix(), tostring(vehicle.getFullName ~= nil and vehicle:getFullName() or "?"),
         fromGroup, toGroup, why, gear, load, rpm, speed, extra or ""))
 end
@@ -291,6 +300,7 @@ local function adjustGroups(motor, s, g, curve, curGear, gears, pedal, speed, di
     g.noUpCoast = false
     g.highTime = 0
     g.groupShifts = g.groupShifts + 1
+    g.ownGroup = true
     g.ownTarget = bestGear
     logGroup(motor.vehicle, s, active, newGroup, why, bestGear, g.load, curRpm, speed,
         string.format(" | puissance x%.2f", bestPower / math.max(curPower, 0.0001)))
@@ -363,9 +373,22 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
 
     -- gear changed since the last call: reset the timers; a shift the game chose is logged
     -- (measurement, to compare with and without FlowDrive), one we asked for was logged when decided
+    -- group changed by the game (measurement): logged once, with the state that led to it
+    local activeGroup = motor.activeGearGroupIndex
+    if g.lastGroup ~= nil and activeGroup ~= nil and activeGroup ~= g.lastGroup then
+        if not g.ownGroup and s.debug then
+            print(string.format("%s gammes : %s | jeu gamme %d -> %d | rapport %d charge %.2f regime %.0f vitesse %.1f km/h",
+                FlowDrive.logPrefix(), tostring(vehicle.getFullName ~= nil and vehicle:getFullName() or "?"),
+                g.lastGroup, activeGroup, curGear, g.load, curRpm, speed))
+        end
+        g.ownGroup = nil
+    end
+    g.lastGroup = activeGroup
+
     if g.lastGear ~= nil and curGear ~= g.lastGear then
         g.highTime = 0
-        g.coastTime = 0
+        g.coastTime = g.ownCoast and (G.COAST_TIME - G.COAST_REPEAT) or 0
+        g.ownCoast = nil
         if curGear ~= g.ownTarget then
             logShift(vehicle, s, "jeu", g.lastGear, curGear, g.load, curRpm, speed, "")
         end
@@ -402,7 +425,7 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
                 g.upGuards = g.upGuards + 1
                 if s.debug and (g_time or 0) >= g.guardLogAt then
                     g.guardLogAt = (g_time or 0) + G.GUARD_LOG_INTERVAL
-                    print(string.format("%s rapports : %s | FlowDrive refuse la montee %d -> %d (garde %d) | charge %.2f regime %d vitesse %.1f km/h",
+                    print(string.format("%s rapports : %s | FlowDrive refuse la montee %d -> %d (garde %d) | charge %.2f regime %.0f vitesse %.1f km/h",
                         FlowDrive.logPrefix(), tostring(vehicle.getFullName ~= nil and vehicle:getFullName() or "?"),
                         curGear, newGear, k, g.load, curRpm, speed))
                 end
@@ -439,7 +462,7 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
                 g.noUpCoast = false
                 g.downshifts = g.downshifts + 1
                 logShift(vehicle, s, "FlowDrive", curGear, curGear - 1, g.load, curRpm, speed,
-                    string.format(" | regime apres %d, puissance x%.2f", candRpm, candPower / math.max(curPower, 0.0001)))
+                    string.format(" | regime apres %.0f, puissance x%.2f", candRpm, candPower / math.max(curPower, 0.0001)))
                 return curGear - 1
             end
         end
@@ -458,12 +481,13 @@ function G.adjust(motor, newGear, curGear, gears, gearSign, acceleratorPedal, dt
         local candRpm = diffRpm * math.abs(gears[curGear - 1].ratio * mult)
         if curRpm < curve.idle + curve.range * share and candRpm <= curve.idle + curve.range * G.COAST_HEADROOM then
             g.coastTime = 0
+            g.ownCoast = true
             g.ownTarget = curGear - 1
             g.noUpUntil = (g_time or 0) + G.COAST_UP_HOLD
             g.noUpCoast = true
             g.coastShifts = g.coastShifts + 1
             logShift(vehicle, s, "FlowDrive frein moteur", curGear, curGear - 1, g.load, curRpm, speed,
-                string.format(" | seuil %.0f %%, regime apres %d", share * 100, candRpm))
+                string.format(" | seuil %.0f %%, regime apres %.0f", share * 100, candRpm))
             return curGear - 1
         end
     end
