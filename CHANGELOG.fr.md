@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) · **Français**
 
+## Non publié
+- **Boîtes à rapports fixes (powershift, semi-powershift, boîtes manuelles utilisées en automatique).** Rétrogradation automatique sous charge. Quand le moteur reste très chargé sous le régime qui garde 85 % de la puissance maxi, FlowDrive demande le rapport inférieur s'il donne plus de puissance et laisse de la marge avant le régime maxi. Une montée de rapport est refusée pendant 4 s après cette rétrogradation (pas de va-et-vient).
+- FlowDrive n'agit que si le jeu passe lui-même les rapports (réglage de boîte sur automatique, ou véhicule qui ne se passe pas à la main). Un joueur qui passe les rapports à la main n'est jamais touché.
+- **Frein moteur.** Pied levé depuis 0,6 s au-dessus de 6 km/h, la boîte rétrograde quand le régime passe sous 30 % de la plage (jusqu'à 50 % avec une charge lourde attelée), si le régime après passage reste sous 75 % de la plage. Le jeu ne le faisait que sous 25 %.
+- **Gammes automatiques.** Montée de la gamme depuis le dernier rapport à 90 % de la plage de régime (le jeu attend 50 tr/min sous le maxi), dans le rapport qui donne le plus de puissance, seulement si le moteur reste sous 80 % de charge. Descente de gamme quand le moteur peine sous charge au rapport le plus bas. Au moins 4 s entre deux changements de gamme.
+- Trois nouveaux réglages généraux (menu, ceux de l'hôte en multijoueur) : rétrograder sous charge, frein moteur, gammes automatiques.
+- Le choix marche/arrêt du menu et la touche existent aussi sur ces véhicules ; la bulle d'aide du menu donne l'état. Les autres fonctions (rampes, gammes, PdF, boost…) ne sont pas disponibles sur les boîtes à rapports fixes.
+- Une ligne de log par véhicule au chargement (`boite : …`) indique ce que le moteur dit de la boîte et ce que FlowDrive en fait. Avec la touche de mesure (debug), chaque changement de rapport est journalisé (`rapports : …`), celui du jeu comme celui de FlowDrive.
+
 ## 1.1.0.0
 - **Multijoueur (expérimental).** Les réglages de chaque machine (touches et menu) sont envoyés au serveur et aux autres joueurs, ainsi qu'au joueur qui rejoint la partie.
 - En multijoueur, le serveur calcule la boîte. Il envoie aux joueurs ce qu'il faut pour l'affichage, DashboardLive et les messages (rampe auto, gamme active, moteur froid, boost, température moteur, préchauffage).

@@ -54,6 +54,12 @@
         <text name="fd_opt_hudPos_tt" text="Right: above the speedometer. Left: above the map."/>
         <text name="fd_opt_dbl" text="DashboardLive screens"/>
         <text name="fd_opt_dbl_tt" text="Provides ramp, range and lamps to screens that used to read CVT Addon."/>
+        <text name="fd_opt_gearLoad" text="Fixed-gear boxes: downshift under load"/>
+        <text name="fd_opt_gearLoad_tt" text="Fixed-gear boxes in automatic: the lower gear is taken when the engine struggles under load."/>
+        <text name="fd_opt_gearCoast" text="Fixed-gear boxes: engine braking"/>
+        <text name="fd_opt_gearCoast_tt" text="With the pedal released, the box downshifts earlier to brake with the engine (more with a heavy load)."/>
+        <text name="fd_opt_gearGroups" text="Fixed-gear boxes: automatic ranges"/>
+        <text name="fd_opt_gearGroups_tt" text="Gear groups in automatic: upshift before the rev limiter, downshift under load."/>
         <text name="fd_not_available" text="Not available on this vehicle: %s"/>
         <text name="fd_yes" text="Yes"/>
         <text name="fd_no" text="No"/>
@@ -80,6 +86,11 @@
         <text name="fd_reason_noCvt" text="gearbox with fixed gears"/>
         <text name="fd_reason_electric" text="electric motor, left to the game"/>
         <text name="fd_reason_category" text="category %s not handled"/>
+
+        <!-- 1.2.0: gearboxes with fixed gears -->
+        <text name="fd_gear_auto" text="Fixed-gear gearbox: automatic gears active (downshift under load)."/>
+        <text name="fd_gear_manual" text="Fixed-gear gearbox: manual shifting (game setting), FlowDrive does not act."/>
+        <text name="fd_gear_off" text="Fixed-gear gearbox: FlowDrive off, base game driving."/>
 
         <!-- Messages -->
         <text name="fd_msg_notAvailable" text="FlowDrive: not available on this vehicle (%s)"/>

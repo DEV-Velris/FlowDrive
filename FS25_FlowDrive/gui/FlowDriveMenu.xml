@@ -120,6 +120,28 @@
                     </MultiTextOption>
                 </GuiElement>
 
+                <!-- 1.2.0: aids of the fixed-gear boxes -->
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_gearLoad"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optGearLoad">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttGearLoad" position="700px 0px" text="$l10n_fd_opt_gearLoad_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_gearCoast"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optGearCoast">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttGearCoast" position="700px 0px" text="$l10n_fd_opt_gearCoast_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
+                <GuiElement profile="fs25_multiTextOptionContainer">
+                    <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_gearGroups"/>
+                    <MultiTextOption profile="fs25_settingsMultiTextOption" id="optGearGroups">
+                        <Text profile="fs25_multiTextOptionTooltip" name="ignore" id="ttGearGroups" position="700px 0px" text="$l10n_fd_opt_gearGroups_tt"/>
+                    </MultiTextOption>
+                </GuiElement>
+
                 <GuiElement profile="fs25_multiTextOptionContainer">
                     <Text profile="multiTextOptionSettingsTitle" text="$l10n_fd_opt_hud"/>
                     <MultiTextOption profile="fs25_settingsMultiTextOption" id="optHud">

@@ -158,7 +158,14 @@ function FlowDriveMenu:updateContent()
         self.boostButton:setDisabled(not eligible)
     end
     self.optFlow:setDisabled(not eligible or s.profile ~= "harvester")
-    if not eligible and self.ttEnabled ~= nil then
+    -- 1.2.0: fixed-gear box handled by FlowDriveGears: only the on/off choice, with a status line
+    local gearOnly = not eligible and s.gearEligible == true
+    if gearOnly then
+        self.optEnabled:setDisabled(false)
+    end
+    if gearOnly and self.ttEnabled ~= nil then
+        self.ttEnabled:setText(FlowDrive.t(FlowDriveGears.getStatusKey(vehicle, s) or "fd_gear_auto"))
+    elseif not eligible and self.ttEnabled ~= nil then
         self.ttEnabled:setText(FlowDrive.tf("fd_not_available", FlowDriveSpec.getReasonText(s)))
     elseif self.ttEnabled ~= nil then
         self.ttEnabled:setText(FlowDrive.t("fd_opt_enabled_tt"))
@@ -173,8 +180,17 @@ function FlowDriveMenu:updateContent()
     self.optPreheat:setState(boolState(FlowDrive.rule("preheat")))
     self.optCold:setTexts(yesNo())
     self.optCold:setState(boolState(FlowDrive.rule("coldProtect")))
+    -- 1.2.0: aids of the fixed-gear boxes (the server's setting applies in multiplayer)
+    self.optGearLoad:setTexts(yesNo())
+    self.optGearLoad:setState(boolState(FlowDrive.rule("gearLoad") ~= false))
+    self.optGearCoast:setTexts(yesNo())
+    self.optGearCoast:setState(boolState(FlowDrive.rule("gearCoast") ~= false))
+    self.optGearGroups:setTexts(yesNo())
+    self.optGearGroups:setState(boolState(FlowDrive.rule("gearGroups") ~= false))
     for _, entry in ipairs({{self.optHydraulic, self.ttHydraulic, "fd_opt_hydraulic_tt"},
-        {self.optPreheat, self.ttPreheat, "fd_opt_preheat_tt"}, {self.optCold, self.ttCold, "fd_opt_cold_tt"}}) do
+        {self.optPreheat, self.ttPreheat, "fd_opt_preheat_tt"}, {self.optCold, self.ttCold, "fd_opt_cold_tt"},
+        {self.optGearLoad, self.ttGearLoad, "fd_opt_gearLoad_tt"}, {self.optGearCoast, self.ttGearCoast, "fd_opt_gearCoast_tt"},
+        {self.optGearGroups, self.ttGearGroups, "fd_opt_gearGroups_tt"}}) do
         entry[1]:setDisabled(fromServer)
         if entry[2] ~= nil then
             entry[2]:setText(FlowDrive.t(fromServer and "fd_opt_serverRule_tt" or entry[3]))
@@ -264,6 +280,12 @@ function FlowDriveMenu:onClickApply()
         if FlowDriveSpec.onSettingsChanged ~= nil then
             FlowDriveSpec.onSettingsChanged(vehicle)
         end
+    elseif s ~= nil and s.gearEligible then
+        -- 1.2.0: fixed-gear box: only the on/off choice exists
+        s.enabled = stateBool(self.optEnabled)
+        if FlowDriveSpec.onSettingsChanged ~= nil then
+            FlowDriveSpec.onSettingsChanged(vehicle)
+        end
     end
 
     local settings = FlowDrive.settings
@@ -272,18 +294,22 @@ function FlowDriveMenu:onClickApply()
         settings.hydraulic = stateBool(self.optHydraulic)
         settings.preheat = stateBool(self.optPreheat)
         settings.coldProtect = stateBool(self.optCold)
+        settings.gearLoad = stateBool(self.optGearLoad)
+        settings.gearCoast = stateBool(self.optGearCoast)
+        settings.gearGroups = stateBool(self.optGearGroups)
     end
     settings.hud = stateBool(self.optHud)
     settings.hudPos = self.optHudPos:getState() == 2 and 2 or 1
     settings.dbl = stateBool(self.optDbl)
     pcall(FlowDrive.saveSettings)
 
-    print(FlowDrive.logPrefix() .. string.format(" menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s puissance jeu=%s ch debit=%s | hydraulique=%s prechauffage=%s froid=%s affichage=%s position=%s dbl=%s",
+    print(FlowDrive.logPrefix() .. string.format(" menu : enregistre | actif=%s rampe=%s gamme=%s pdfEco=%s memoire=%s M1=%s M2=%s boost=%s %s%% inclus=%s puissance jeu=%s ch debit=%s | hydraulique=%s prechauffage=%s froid=%s rapports charge=%s frein moteur=%s gammes=%s affichage=%s position=%s dbl=%s",
         tostring(s ~= nil and s.enabled), tostring(s ~= nil and s.ramp), tostring(s ~= nil and s.range),
         tostring(s ~= nil and s.ptoEco), tostring(s ~= nil and s.memory), tostring(s ~= nil and s.memRpm[1]),
         tostring(s ~= nil and s.memRpm[2]), tostring(s ~= nil and s.boostEnabled), tostring(s ~= nil and s.boostPct),
         tostring(s ~= nil and s.boostIncluded), tostring(s ~= nil and s.gameHp), tostring(s ~= nil and s.flowEnabled),
-        tostring(settings.hydraulic), tostring(settings.preheat), tostring(settings.coldProtect), tostring(settings.hud),
+        tostring(settings.hydraulic), tostring(settings.preheat), tostring(settings.coldProtect),
+        tostring(settings.gearLoad), tostring(settings.gearCoast), tostring(settings.gearGroups), tostring(settings.hud),
         tostring(settings.hudPos), tostring(settings.dbl)))
     if g_currentMission ~= nil and g_currentMission.hud ~= nil and g_currentMission.hud.addSideNotification ~= nil then
         g_currentMission.hud:addSideNotification({1, 1, 1, 1}, FlowDrive.t("fd_msg_saved"), 2500)

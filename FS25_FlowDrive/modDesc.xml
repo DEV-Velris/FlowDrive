@@ -37,6 +37,7 @@ Ne pas utiliser avec CVT Addon. Multijoueur : exp√©rimental (signaler les probl√
     <multiplayer supported="true"/>
 
     <extraSourceFiles>
+        <sourceFile filename="scripts/FlowDriveGears.lua"/>
         <sourceFile filename="scripts/FlowDriveMain.lua"/>
         <sourceFile filename="scripts/FlowDriveMenu.lua"/>
         <sourceFile filename="scripts/FlowDriveEvents.lua"/>
